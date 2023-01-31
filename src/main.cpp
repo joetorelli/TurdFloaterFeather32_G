@@ -49,6 +49,7 @@
                     when ticker calls, all the callbacks just set a flag, then loop reads the flags
                   this version seems stable, need to stop serial.print's
                 G moved to git hub
+                  BT =  has OLED Display and SSW inop
 
 
             Need to fix
@@ -315,11 +316,11 @@ void DisplayUpdate(void);        // update oled data
 void DisplayUpdateSetFlag(void); // set flag to run display update
 boolean DisplayUpdateFlag = ON;  // update flag
 
-void DisplayOff(void);           // blanks disp
-void DisplayOffSetFlag();        // set flag to run displayoff
-boolean DisplayOffFlag = OFF;    //update flag
+void DisplayOff(void);        // blanks disp
+void DisplayOffSetFlag();     // set flag to run displayoff
+boolean DisplayOffFlag = OFF; // update flag
 
-void DisplayOn(void);            // update disp on start blank timer
+void DisplayOn(void); // update disp on start blank timer
 
 void SD_Update();           // write to sd file
 void SD_UpdateSetFlag();    // set flag to run SD update
@@ -513,7 +514,7 @@ void setup()
     DEBUGPRINTLN(WiFi.localIP());
 
     // display connection on oled
-    //OLED_Display.println(""); // line 3
+    // OLED_Display.println(""); // line 3
     OLED_Display.print("Connected");
     OLED_Display.println("IP:");
     OLED_Display.print(WiFi.localIP());
@@ -521,8 +522,6 @@ void setup()
     delay(1000);
     OLED_Display.clearDisplay();
     OLED_Display.display();
-
- 
 
     // **********************  ntp   ****************** //
     // stop up date
@@ -1004,7 +1003,7 @@ void loop()
   }
   if (DisplayOffFlag == ON)
   {
-DisplayOff();
+    DisplayOff();
     DisplayOffFlag = OFF;
   }
   /********* run every loop *********/
@@ -1076,12 +1075,12 @@ void SystemSetUp(void)
 void DisplayOff(void)
 {
   DisplayState = OFF;
-  //Serial.println("DisplayOff");
-  //Serial.printf("DisplayOffSSWMode %i \n",SSWMode);
-  // did we time out while in AutoControl and not in BT
+  // Serial.println("DisplayOff");
+  // Serial.printf("DisplayOffSSWMode %i \n",SSWMode);
+  //  did we time out while in AutoControl and not in BT
   if (SSWMode <= 1) // && BTStatusFlag == OFF)
   {
-    //Serial.printf("SSWMode %i \n",SSWMode);
+    // Serial.printf("SSWMode %i \n",SSWMode);
     DisplayState = OFF;
     DisplayUpdateFlag = OFF;
     // blank disp
@@ -1101,7 +1100,6 @@ void DisplayOffSetFlag(void)
   /* don't want to spend much time in callback
      so just set flag*/
   DisplayOffFlag = ON;
-
 }
 
 void DisplayOn(void)
@@ -1110,15 +1108,14 @@ void DisplayOn(void)
   // if (DISPTimeOut <= 0) // did we time out
   // {
   DisplayState = ON;
- // if (SSWMode == 0) // && BTStatusFlag == OFF)
-  
+  // if (SSWMode == 0) // && BTStatusFlag == OFF)
 
-    //Serial.println("DispOFFTimer");
-    DisplayOffTimer.once(DISP_TimeOut, DisplayOffSetFlag);
-  
+  // Serial.println("DispOFFTimer");
+  DisplayOffTimer.once(DISP_TimeOut, DisplayOffSetFlag);
+
   // blank disp
-  //OLED_Display.clearDisplay();
-  //OLED_Display.display();
+  // OLED_Display.clearDisplay();
+  // OLED_Display.display();
   // DisplayUpdate();
   //  if(SSWMode ==0 && BTStatusFlag == OFF){
   //  DisplayOffTimer.once(DISP_TimeOut, DisplayOff);
@@ -1132,6 +1129,7 @@ void DisplayOn(void)
   //  Serial.print(DISPTimeOut);
   // }
 }
+
 // stop CLPump
 void CLPumpOFF(void)
 {
@@ -1150,6 +1148,7 @@ void CLPumpOFF(void)
   // Serial.print(DISPTimeOut);
   //}
 }
+
 void DisplayUpdateSetFlag(void)
 {
   /* don't want to spend much time in callback
@@ -1160,13 +1159,28 @@ void DisplayUpdateSetFlag(void)
 // send data to app
 void DisplayUpdate(void)
 {
-  //Serial.println("DisplayUpdate()");
+  // Serial.println("DisplayUpdate()");
+  if (BTStatusFlag == ON) // mode sw to auto BT ON
+  {
+    // Serial.println("DisplayUpdate() / DisplayState=ON / BTStatusFlag=ON");
+    OLED_Display.clearDisplay();
+    OLED_Display.setCursor(0, 0);
+    OLED_Display.println("BT Connected!");
+
+    DisplayLevelSensor(&OLED_Display, &Sensor_Level_Values);
+    // DisplayEnvSensor(&OLED_Display, &Sensor_Env_Values);
+    OLED_Light(&OLED_Display, Count, &Sensor_Level_Values);
+
+    OLED_Display.display();
+    return;
+  }
+
   if (DisplayState == ON)
   {
-    //Serial.println("DisplayUpdate() / DisplayState=ON");
+    // Serial.println("DisplayUpdate() / DisplayState=ON");
     if (BTStatusFlag == OFF) //  BT OFF
     {
-      //Serial.println("DisplayUpdate() / DisplayState=ON / BTStatusFlag=OFF");
+      // Serial.println("DisplayUpdate() / DisplayState=ON / BTStatusFlag=OFF");
       switch (SSWMode)
       {
       case 0: // encoder sw
@@ -1268,27 +1282,17 @@ void DisplayUpdate(void)
         break;
       }
     }
-    else if (BTStatusFlag == ON) // mode sw to auto BT ON
-    {
-      //Serial.println("DisplayUpdate() / DisplayState=ON / BTStatusFlag=ON");
-      OLED_Display.clearDisplay();
-      OLED_Display.setCursor(0, 0);
-      OLED_Display.println("BT Connected!");
-
-      DisplayLevelSensor(&OLED_Display, &Sensor_Level_Values);
-      // DisplayEnvSensor(&OLED_Display, &Sensor_Env_Values);
-      OLED_Light(&OLED_Display, Count, &Sensor_Level_Values);
-
-      OLED_Display.display();
-    }
   }
   else // blank display
   {
-    //Serial.println("DisplayUpdate() / DisplayState=OFF");
-/*     OLED_Display.clearDisplay();
+    // Serial.println("DisplayUpdate() / DisplayState=OFF");
+    // if (BTStatusFlag == ON)
+    // {
+    OLED_Display.clearDisplay();
     OLED_Display.setCursor(0, 0);
-    // // OLED_Display.println("BT Connected!");
-    OLED_Display.display(); */
+    // OLED_Display.println("BT Connected! DisplayStateOFF");
+    OLED_Display.display();
+    // }
   }
 }
 
@@ -1299,8 +1303,8 @@ void NumberSelectorLoop()
   if (rotaryEncoder->encoderChanged())
   {
     ENCValue = numberSelector.getValue();
-    //Serial.print(ENCValue);
-    //Serial.println(" ");
+    // Serial.print(ENCValue);
+    // Serial.println(" ");
   }
 }
 
@@ -1321,29 +1325,29 @@ void pressed(Button2 &btn)
       CLPumpManFlag = OFF;
   ******************************/
 
-  //Serial.print("pressed ");
-  // if (DisplayState == OFF)
-  // {
-  //   Serial.println("SWEncoder DispON ");
-  //   // DisplayOn();
-  //   DisplayState = ON;
-  //   DisplayUpdate();
-  // }
+  // Serial.print("pressed ");
+  //  if (DisplayState == OFF)
+  //  {
+  //    Serial.println("SWEncoder DispON ");
+  //    // DisplayOn();
+  //    DisplayState = ON;
+  //    DisplayUpdate();
+  //  }
   if (btn == SWEncoder)
   {
     SSWMode = 0;
-    //Serial.println("SWEncoder ");
+    // Serial.println("SWEncoder ");
 
     if (DisplayState == OFF)
     {
-      //Serial.println("SWEncoder DispON ");
+      // Serial.println("SWEncoder DispON ");
       DisplayOn();
       // DisplayState = ON;
       // DisplayUpdate();
     }
     else
     {
-      //Serial.println("SWEncoderFlag ");
+      // Serial.println("SWEncoderFlag ");
       SWEncoderFlag = ON;
     }
   }
@@ -1353,15 +1357,14 @@ void pressed(Button2 &btn)
   {
     if (btn == SSWAuto)
     {
-      //Serial.println("SSWAuto");
+      // Serial.println("SSWAuto");
 
       if (SSWMode != 1)
       {
 
-          DisplayOn();
-          // DisplayState = ON;
-          // DisplayUpdate();
-        
+        DisplayOn();
+        // DisplayState = ON;
+        // DisplayUpdate();
       }
       SSWMode = 1;
 
@@ -1370,7 +1373,7 @@ void pressed(Button2 &btn)
     }
     else if (btn == SSWAlarm)
     {
-      //Serial.println("SSWAlarm");
+      // Serial.println("SSWAlarm");
       SSWMode = 2;
 
       PumpManFlag = OFF;
@@ -1378,30 +1381,30 @@ void pressed(Button2 &btn)
 
       AutoManControl = OFF;
 
-       if (DisplayState == OFF)
+      if (DisplayState == OFF)
       {
-        //DisplayOn();
+        // DisplayOn();
         DisplayState = ON;
-         DisplayUpdate();
-      } 
+        DisplayUpdate();
+      }
     }
 
     else if (btn == SSWOff)
     {
-      //Serial.println("SSWOff");
+      // Serial.println("SSWOff");
       SSWMode = 3;
 
       PumpManFlag = OFF;
       AlarmManFlag = OFF;
 
       AutoManControl = OFF;
-      
-       if (DisplayState == OFF)
+
+      if (DisplayState == OFF)
       {
-        //DisplayOn();
-         DisplayState = ON;
-         DisplayUpdate();
-      } 
+        // DisplayOn();
+        DisplayState = ON;
+        DisplayUpdate();
+      }
 
       /*     if (SWEncoderFlag == ON)
           {
@@ -1412,7 +1415,7 @@ void pressed(Button2 &btn)
     }
     else if (btn == SSWPump)
     {
-      //Serial.println("SSWPump");
+      // Serial.println("SSWPump");
       SSWMode = 4;
 
       PumpManFlag = ON;
@@ -1420,12 +1423,12 @@ void pressed(Button2 &btn)
 
       AutoManControl = OFF;
 
-       if (DisplayState == OFF)
+      if (DisplayState == OFF)
       {
-        //DisplayOn();
-         DisplayState = ON;
-         DisplayUpdate();
-      } 
+        // DisplayOn();
+        DisplayState = ON;
+        DisplayUpdate();
+      }
     }
     else
     {
