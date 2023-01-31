@@ -48,6 +48,7 @@
                   moving over to ticker - causing issues
                     when ticker calls, all the callbacks just set a flag, then loop reads the flags
                   this version seems stable, need to stop serial.print's
+                G moved to git hub
 
 
             Need to fix
@@ -67,6 +68,7 @@
               done - oled on/off control in software disabled for now in DisplayOff
               done - get minimum pump run level for auto and manual
               done - need to add timer to CLPump currently on delay()
+                     show oled when connected to BT
 
               inwork -
                   splitting files
@@ -1075,7 +1077,7 @@ void DisplayOff(void)
 {
   DisplayState = OFF;
   //Serial.println("DisplayOff");
-  Serial.printf("DisplayOffSSWMode %i \n",SSWMode);
+  //Serial.printf("DisplayOffSSWMode %i \n",SSWMode);
   // did we time out while in AutoControl and not in BT
   if (SSWMode <= 1) // && BTStatusFlag == OFF)
   {
@@ -1111,7 +1113,7 @@ void DisplayOn(void)
  // if (SSWMode == 0) // && BTStatusFlag == OFF)
   
 
-    Serial.println("DispOFFTimer");
+    //Serial.println("DispOFFTimer");
     DisplayOffTimer.once(DISP_TimeOut, DisplayOffSetFlag);
   
   // blank disp
@@ -1297,8 +1299,8 @@ void NumberSelectorLoop()
   if (rotaryEncoder->encoderChanged())
   {
     ENCValue = numberSelector.getValue();
-    Serial.print(ENCValue);
-    Serial.println(" ");
+    //Serial.print(ENCValue);
+    //Serial.println(" ");
   }
 }
 
@@ -1319,7 +1321,7 @@ void pressed(Button2 &btn)
       CLPumpManFlag = OFF;
   ******************************/
 
-  Serial.print("pressed ");
+  //Serial.print("pressed ");
   // if (DisplayState == OFF)
   // {
   //   Serial.println("SWEncoder DispON ");
@@ -1330,18 +1332,18 @@ void pressed(Button2 &btn)
   if (btn == SWEncoder)
   {
     SSWMode = 0;
-    Serial.println("SWEncoder ");
+    //Serial.println("SWEncoder ");
 
     if (DisplayState == OFF)
     {
-      Serial.println("SWEncoder DispON ");
+      //Serial.println("SWEncoder DispON ");
       DisplayOn();
       // DisplayState = ON;
       // DisplayUpdate();
     }
     else
     {
-      Serial.println("SWEncoderFlag ");
+      //Serial.println("SWEncoderFlag ");
       SWEncoderFlag = ON;
     }
   }
@@ -1351,7 +1353,7 @@ void pressed(Button2 &btn)
   {
     if (btn == SSWAuto)
     {
-      Serial.println("SSWAuto");
+      //Serial.println("SSWAuto");
 
       if (SSWMode != 1)
       {
@@ -1368,7 +1370,7 @@ void pressed(Button2 &btn)
     }
     else if (btn == SSWAlarm)
     {
-      Serial.println("SSWAlarm");
+      //Serial.println("SSWAlarm");
       SSWMode = 2;
 
       PumpManFlag = OFF;
@@ -1386,7 +1388,7 @@ void pressed(Button2 &btn)
 
     else if (btn == SSWOff)
     {
-      Serial.println("SSWOff");
+      //Serial.println("SSWOff");
       SSWMode = 3;
 
       PumpManFlag = OFF;
@@ -1410,7 +1412,7 @@ void pressed(Button2 &btn)
     }
     else if (btn == SSWPump)
     {
-      Serial.println("SSWPump");
+      //Serial.println("SSWPump");
       SSWMode = 4;
 
       PumpManFlag = ON;
