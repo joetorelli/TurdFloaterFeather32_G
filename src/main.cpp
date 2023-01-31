@@ -70,6 +70,7 @@
               done - get minimum pump run level for auto and manual
               done - need to add timer to CLPump currently on delay()
                      show oled when connected to BT
+                     add alarm if not in auto after some time
 
               inwork -
                   splitting files
@@ -1165,11 +1166,18 @@ void DisplayUpdate(void)
     // Serial.println("DisplayUpdate() / DisplayState=ON / BTStatusFlag=ON");
     OLED_Display.clearDisplay();
     OLED_Display.setCursor(0, 0);
-    OLED_Display.println("BT Connected!");
+    OLED_Display.println("*** BT Connected! ***");
 
     DisplayLevelSensor(&OLED_Display, &Sensor_Level_Values);
     // DisplayEnvSensor(&OLED_Display, &Sensor_Env_Values);
-    OLED_Light(&OLED_Display, Count, &Sensor_Level_Values);
+    //OLED_Light(&OLED_Display, Count, &Sensor_Level_Values);
+    OLED_Display.printf("Pump: %d\n",PumpStatus);
+    OLED_Display.printf(" On: %d Off: %d\n",PumpOnLevel,PumpOffLevel);
+    OLED_Display.printf("Alarm: %d\n",AlarmStatus);
+    OLED_Display.printf(" On: %d Off: %d\n",AlarmOnLevel,AlarmOffLevel);
+    OLED_Display.printf("CLPmp: %d\n",CLPumpStatus);
+      int x = CLPump_RunTime;
+    OLED_Display.printf(" RunTime: %d \n",x);
 
     OLED_Display.display();
     return;
@@ -1405,13 +1413,13 @@ void pressed(Button2 &btn)
         DisplayState = ON;
         DisplayUpdate();
       }
-
+      SystemSetUp();
       /*     if (SWEncoderFlag == ON)
-          {
-            SetUpFlag = 1;
-            SWEncoderFlag = OFF;
-            // SystemSetUp();
-          } */
+                {
+                  SetUpFlag = 1;
+                  SWEncoderFlag = OFF;
+                  SystemSetUp();
+                } */
     }
     else if (btn == SSWPump)
     {
