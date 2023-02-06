@@ -7,6 +7,7 @@
 #include "RTClib.h"
 #include "settings.h"
 #include "sensor_readings.h"
+#include "Simple_Menu.h"
 #include <Adafruit_BME280.h>
 // #include "SRF.h"
 // #include "ezTime.h"
