@@ -21,11 +21,14 @@ void DisplayLevelSensor(Adafruit_SSD1306 *Disp, LevelSensor *SenLevVal)
     Disp->print(SenLevVal->ShuntImA, 2);
     Disp->print(" MV: ");
     Disp->println(SenLevVal->ShuntVmv, 2); */
+Disp->setTextSize(2);
 
-    Disp->print("MM: ");
-    Disp->print(SenLevVal->DepthMM);
-    Disp->print(" IN: ");
-    Disp->println(SenLevVal->DepthIn, 1);
+        Disp->printf("  %d mm\n",SenLevVal->DepthMM);
+    // Disp->print(SenLevVal->DepthMM);
+    // Disp->print(" MM");
+    // Disp->print(" IN: ");
+    // Disp->println(SenLevVal->DepthIn, 1);
+    Disp->setTextSize(1);
 }
 
 
