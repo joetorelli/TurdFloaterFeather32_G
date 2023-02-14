@@ -69,19 +69,17 @@
               done - oled on/off control in software disabled for now in DisplayOff
               done - get minimum pump run level for auto and manual
               done - need to add timer to CLPump currently on delay() = Ticker
-              done - test Pump/Alarm ON > Pump/Alarm Off
+
 
               inwork -
                   splitting files
                   menu system setup
                   show oled when connected to BT
-
+                  add alarm if not in auto after some time
 
               open -
-                  add alarm if not in auto after some time
-                  
-                  Connect to ESPHome
-                  Vol adj to PWM for alarm works on screen
+              Connect to ESPHome
+              Vol adj to PWM for alarm works on screen
 
 
 
@@ -203,7 +201,7 @@
 #define ROTARY_ENCODER_B_PIN 15
 #define ROTARY_ENCODER_BUTTON_PIN SWEncoderPin // button handled by Button2
 #define ROTARY_ENCODER_VCC_PIN -1              /* 27 put -1 of Rotary encoder Vcc is connected directly to 3,3V; else you can use declared output pin for powering rotary encoder */
-#define ROTARY_ENCODER_STEPS 10
+#define ROTARY_ENCODER_STEPS 4
 
 /**********************************************
   Global Vars
@@ -412,10 +410,10 @@ menuFrame TestMenu;  // runs when Program Starts
 
 // menu call functions
 void testFunct();
-void PumpOnAdjust();
-void PumpOffAdjust();
-void AlarmOnAdjust();
-void AlarmOffAdjust();
+void PumpHiAdjust();
+void PumpLowAdjust();
+void AlarmHiAdjust();
+void AlarmLowAdjust();
 void CLTimeAdjust();
 void VolumeAdjust();
 void PumpOnOff();
@@ -493,7 +491,7 @@ void setup()
   DEBUGPRINT("Waiting for Network:");
 
   OLED_Display.setCursor(0, 0);
-  OLED_Display.println("TurdF v G");           // line version displ
+  OLED_Display.println("TurdF v F");           // line version displ
   OLED_Display.println("Connecting to SSID:"); // line 2
   OLED_Display.println(WIFI_SSID);             // line 3
   OLED_Display.print("Waiting for Network:");
@@ -823,8 +821,8 @@ void setup()
 
   // minValue, maxValue, circleValues true|false (when max go to min and vice versa)
   // rotaryEncoder->setBoundaries(0, 2, false); // dosen't work good in true
-  rotaryEncoder->setAcceleration(0); // use this with ROTARY_ENCODER_STEPS, acts like debouce and changes response
-  rotaryEncoder->setEncoderValue(0); // enc start value
+  rotaryEncoder->setAcceleration(50); // use this with ROTARY_ENCODER_STEPS, acts like debouce and changes response
+  rotaryEncoder->setEncoderValue(0);  // enc start value
 
   // numberSelector.attachEncoder(rotaryEncoder);
   //  example 1
@@ -900,8 +898,8 @@ void setup()
   //  // Submenu 1
   //  mainMenu.addMenu("Pump mm", 1);
   PumpMenu.addNode("ON/OFF", ACT_NODE, &PumpOnOff);
-  PumpMenu.addNode("On Level", ACT_NODE, &PumpOnAdjust);
-  PumpMenu.addNode("Off Level", ACT_NODE, &PumpOffAdjust);
+  PumpMenu.addNode("High Level", ACT_NODE, &PumpHiAdjust);
+  PumpMenu.addNode("Low Level", ACT_NODE, &PumpLowAdjust);
   PumpMenu.addNode("CL Time", ACT_NODE, &CLTimeAdjust);
 
   // Alarm Menu
@@ -911,8 +909,8 @@ void setup()
   //  // Submenu 1
   //  mainMenu.addMenu("Pump mm", 1);
   AlarmMenu.addNode("ON/OFF", ACT_NODE, &AlarmOnOff);
-  AlarmMenu.addNode("On Level", ACT_NODE, &AlarmOnAdjust);
-  AlarmMenu.addNode("Off Level", ACT_NODE, &AlarmOffAdjust);
+  AlarmMenu.addNode("High Level", ACT_NODE, &AlarmHiAdjust);
+  AlarmMenu.addNode("Low Level", ACT_NODE, &AlarmLowAdjust);
 
   // Testing menu
   TestMenu.addMenu("Testing", 0);
@@ -938,13 +936,8 @@ void setup()
   OLED_Display.setCursor(0, 0);
   OLED_Display.display();
 
-  // Force to Auto Position
-  PumpPositionFlag = OFF;
-  AlarmPositionFlag = OFF;
-  OffPositionFlag = OFF;
-  AutoPositionFlag = ON;
+  DisplayOn();
   SSWMode = 1;
-  DisplayOn(); // update display and start screen time out
 }
 
 /**********************************************
@@ -1086,8 +1079,6 @@ void loop()
     SendAppData();
     SendAppDataFlag = OFF;
   }
-
-  // Blank Display
   if (DisplayOffFlag == ON)
   {
     DisplayOff();
@@ -1117,77 +1108,20 @@ void MenuChoose(int Mode)
   }
 }
 
-void PumpOnAdjust()
+void PumpHiAdjust()
 {
   // turn flag off
   SWEncoderFlag = OFF;
 
   // menu settings
-  rotaryEncoder->setBoundaries((PumpOffLevel+1), 3000, false);
+  rotaryEncoder->setBoundaries(0, 3000, false);
   rotaryEncoder->setAcceleration(4000);
-  // put current Pump Hi level here
-  rotaryEncoder->setEncoderValue(PumpOnLevel);
-
-  // stay in loop while changing value exit when push button pressed
-  while (SWEncoderFlag == OFF)
-  {
-
-    // check enc and pushbutton
-    rotary_loop();
-
-    // set up display
-    OLED_Display.clearDisplay();
-    OLED_Display.setCursor(0, 0);
-    OLED_Display.setTextSize(2);
-
-    OLED_Display.println("-Pump  ON-");
-    OLED_Display.setCursor(0, 20);
-    OLED_Display.printf(" %d", ENCValue);
-    OLED_Display.setCursor(80, 20);
-    OLED_Display.println("MM");
-
-    OLED_Display.setTextSize(1);
-    OLED_Display.println("");
-    OLED_Display.println("  Rotate to change");
-    OLED_Display.print(("   Press to enter"));
-    OLED_Display.display();
-
-    // Serial.printf("PumpHiAdjust while Loop SWEncoderFlag %d ENCVal %d\n\r", SWEncoderFlag, ENCValue);
-  }
-  // Serial.println("Left loop");
-  //  may have to save changes here
-  PumpOnLevel = ENCValue;
-  WriteData();
-  // put encvalue into pump level high
-
-  // go back to Pump menu
-  // set up menu settings for pump
-  rotaryEncoder->setBoundaries(0, 3, false);
-  rotaryEncoder->setAcceleration(0);
-  rotaryEncoder->setEncoderValue(0); // stop indicator from jumping on next screen
-
-  SWEncoderFlag = OFF;
-  ENCValue = 0;
-  PumpMenu.nodeIndex = 0;
- // PumpMenu.choose();
-}
-
-void PumpOffAdjust()
-{
-
-  // turn flag off
-  SWEncoderFlag = OFF;
-
-  // menu settings
-  rotaryEncoder->setBoundaries(300, (PumpOnLevel-1), false);
-  rotaryEncoder->setAcceleration(2000);
   // put current Pump Hi level here
   rotaryEncoder->setEncoderValue(PumpOffLevel);
 
   // stay in loop while changing value exit when push button pressed
   while (SWEncoderFlag == OFF)
   {
-
     // check enc and pushbutton
     rotary_loop();
 
@@ -1196,7 +1130,7 @@ void PumpOffAdjust()
     OLED_Display.setCursor(0, 0);
     OLED_Display.setTextSize(2);
 
-    OLED_Display.println("-Pump OFF-");
+    OLED_Display.println("-Pump Adj-");
     OLED_Display.setCursor(0, 20);
     OLED_Display.printf(" %d", ENCValue);
     OLED_Display.setCursor(80, 20);
@@ -1219,237 +1153,62 @@ void PumpOffAdjust()
   // go back to Pump menu
   // set up menu settings for pump
   rotaryEncoder->setBoundaries(0, 3, false);
-  rotaryEncoder->setAcceleration(0);
+  rotaryEncoder->setAcceleration(50);
   rotaryEncoder->setEncoderValue(0); // stop indicator from jumping on next screen
 
   SWEncoderFlag = OFF;
-  ENCValue = 0;
   PumpMenu.nodeIndex = 0;
-  //PumpMenu.choose();
+  ENCValue = 0;
 }
 
-void AlarmOnAdjust()
+void PumpLowAdjust()
 {
-  // turn flag off
-  SWEncoderFlag = OFF;
 
-  // menu settings
-  rotaryEncoder->setBoundaries((AlarmOffLevel+1), 3000, false);
-  rotaryEncoder->setAcceleration(3000);
-  // put current Pump Hi level here
-  rotaryEncoder->setEncoderValue(AlarmOnLevel);
-
-  // stay in loop while changing value exit when push button pressed
-  while (SWEncoderFlag == OFF)
-  {
-
-    // check enc and pushbutton
-    rotary_loop();
-
-    // set up display
-    OLED_Display.clearDisplay();
-    OLED_Display.setCursor(0, 0);
-    OLED_Display.setTextSize(2);
-
-    OLED_Display.println("-Alarm On-");
-    OLED_Display.setCursor(0, 20);
-    OLED_Display.printf(" %d", ENCValue);
-    OLED_Display.setCursor(80, 20);
-    OLED_Display.println("MM");
-
-    OLED_Display.setTextSize(1);
-    OLED_Display.println("");
-    OLED_Display.println("  Rotate to change");
-    OLED_Display.print(("   Press to enter"));
-    OLED_Display.display();
-
-    // Serial.printf("PumpHiAdjust while Loop SWEncoderFlag %d ENCVal %d\n\r", SWEncoderFlag, ENCValue);
-  }
-  // Serial.println("Left loop");
-  //  may have to save changes here
-  AlarmOnLevel = ENCValue;
-  WriteData();
-  // put encvalue into pump level high
-
-  // go back to Pump menu
-  // set up menu settings for pump
-  rotaryEncoder->setBoundaries(0, 2, false);
-  rotaryEncoder->setAcceleration(0);
-  rotaryEncoder->setEncoderValue(0); // stop indicator from jumping on next screen
-
-  SWEncoderFlag = OFF;
-  ENCValue = 0;
-  AlarmMenu.nodeIndex = 0;
-  //PumpMenu.choose();
+  OLED_Display.clearDisplay();
+  OLED_Display.setCursor(0, 0);
+  OLED_Display.print("Pump LOW Adj");
+  OLED_Display.display();
+  delay(1000);
 }
 
-void AlarmOffAdjust()
+void AlarmHiAdjust()
 {
-  // turn flag off
-  SWEncoderFlag = OFF;
+  OLED_Display.clearDisplay();
+  OLED_Display.setCursor(0, 0);
+  OLED_Display.print("Alarm HI Adj");
+  OLED_Display.display();
+  delay(1000);
+}
 
-  // menu settings
-  rotaryEncoder->setBoundaries(0, (AlarmOnLevel-1), false);
-  rotaryEncoder->setAcceleration(3000);
-  // put current Pump Hi level here
-  rotaryEncoder->setEncoderValue(AlarmOffLevel);
-
-  // stay in loop while changing value exit when push button pressed
-  while (SWEncoderFlag == OFF)
-  {
-    // check enc and pushbutton
-    rotary_loop();
-
-    // set up display
-    OLED_Display.clearDisplay();
-    OLED_Display.setCursor(0, 0);
-    OLED_Display.setTextSize(2);
-
-    OLED_Display.println("-Alrm OFF-");
-    OLED_Display.setCursor(0, 20);
-    OLED_Display.printf(" %d", ENCValue);
-    OLED_Display.setCursor(80, 20);
-    OLED_Display.println("MM");
-
-    OLED_Display.setTextSize(1);
-    OLED_Display.println("");
-    OLED_Display.println("  Rotate to change");
-    OLED_Display.print(("   Press to enter"));
-    OLED_Display.display();
-
-    // Serial.printf("PumpHiAdjust while Loop SWEncoderFlag %d ENCVal %d\n\r", SWEncoderFlag, ENCValue);
-  }
-  // Serial.println("Left loop");
-  //  may have to save changes here
-  AlarmOffLevel = ENCValue;
-  WriteData();
-  // put encvalue into pump level high
-
-  // go back to Pump menu
-  // set up menu settings for pump
-  rotaryEncoder->setBoundaries(0, 2, false);
-  rotaryEncoder->setAcceleration(0);
-  rotaryEncoder->setEncoderValue(0); // stop indicator from jumping on next screen
-
-  SWEncoderFlag = OFF;
-  ENCValue = 0;
-  AlarmMenu.nodeIndex = 0;
-  //PumpMenu.choose();
+void AlarmLowAdjust()
+{
+  OLED_Display.clearDisplay();
+  OLED_Display.setCursor(0, 0);
+  OLED_Display.print("Alarm LOW Adj");
+  OLED_Display.display();
+  delay(1000);
 }
 
 void CLTimeAdjust()
 {
-
-  // turn flag off
-  SWEncoderFlag = OFF;
-
-  // menu settings
-  rotaryEncoder->setBoundaries(0, 30, false);
-  rotaryEncoder->setAcceleration(0);
-  // put current Pump Hi level here
-  int x = CLPump_RunTime;
-  rotaryEncoder->setEncoderValue(x);
-
-  // stay in loop while changing value exit when push button pressed
-  while (SWEncoderFlag == OFF)
-  {
-    // check enc and pushbutton
-    rotary_loop();
-
-    // set up display
-    OLED_Display.clearDisplay();
-    OLED_Display.setCursor(0, 0);
-    OLED_Display.setTextSize(2);
-
-    OLED_Display.println("CL RunTime");
-    OLED_Display.setCursor(0, 20);
-    OLED_Display.printf(" %d", ENCValue);
-    OLED_Display.setCursor(75, 20);
-    OLED_Display.println("SEC");
-
-    OLED_Display.setTextSize(1);
-    OLED_Display.println("");
-    OLED_Display.println("  Rotate to change");
-    OLED_Display.print(("   Press to enter"));
-    OLED_Display.display();
-
-    // Serial.printf("PumpHiAdjust while Loop SWEncoderFlag %d ENCVal %d\n\r", SWEncoderFlag, ENCValue);
-  }
-  // Serial.println("Left loop");
-  //  may have to save changes here
-  CLPump_RunTime = ENCValue;
-  WriteData();
-  // put encvalue into pump level high
-
-  // go back to Pump menu
-  // set up menu settings for pump
-  rotaryEncoder->setBoundaries(0, 3, false);
-  rotaryEncoder->setAcceleration(0);
-  rotaryEncoder->setEncoderValue(0); // stop indicator from jumping on next screen
-
-  SWEncoderFlag = OFF;
-  ENCValue = 0;
-  PumpMenu.nodeIndex = 0;
-  //PumpMenu.choose();
+  OLED_Display.clearDisplay();
+  OLED_Display.setCursor(0, 0);
+  OLED_Display.print("Inside CLTime Adj");
+  OLED_Display.display();
+  delay(1000);
 }
 
 void VolumeAdjust()
 {
 
-  // turn flag off
-  SWEncoderFlag = OFF;
-
-  // menu settings
-  rotaryEncoder->setBoundaries(0, 100, false);
-  rotaryEncoder->setAcceleration(1);
-  // put current Pump Hi level here
-  rotaryEncoder->setEncoderValue(AlarmVol);
-
-  // stay in loop while changing value exit when push button pressed
-  while (SWEncoderFlag == OFF)
-  {
-
-    // check enc and pushbutton
-    rotary_loop();
-
-    // set up display
-    OLED_Display.clearDisplay();
-    OLED_Display.setCursor(0, 0);
-    OLED_Display.setTextSize(2);
-
-    OLED_Display.println("- Volume -");
-    OLED_Display.setCursor(0, 20);
-    OLED_Display.printf(" %d", ENCValue);
-    OLED_Display.setCursor(80, 20);
-    OLED_Display.println("MM");
-
-    OLED_Display.setTextSize(1);
-    OLED_Display.println("");
-    OLED_Display.println("  Rotate to change");
-    OLED_Display.print(("   Press to enter"));
-    OLED_Display.display();
-
-    // Serial.printf("PumpHiAdjust while Loop SWEncoderFlag %d ENCVal %d\n\r", SWEncoderFlag, ENCValue);
-  }
-  // Serial.println("Left loop");
-  //  may have to save changes here
-  AlarmVol = ENCValue;
-  WriteData();
-  // put encvalue into pump level high
-
-  // go back to Pump menu
-  // set up menu settings for pump
-  rotaryEncoder->setBoundaries(0, 3, false);
-  rotaryEncoder->setAcceleration(0);
-  rotaryEncoder->setEncoderValue(0); // stop indicator from jumping on next screen
-
-  SWEncoderFlag = OFF;
-  ENCValue = 0;
-  PumpMenu.nodeIndex = 0;
-  //PumpMenu.choose();
+  // same as cl
+  OLED_Display.clearDisplay();
+  OLED_Display.setCursor(0, 0);
+  OLED_Display.print("Inside Volume Adj");
+  OLED_Display.display();
+  delay(1000);
 }
 
-// toggle pump on/off
 void PumpOnOff()
 {
 
@@ -1457,15 +1216,12 @@ void PumpOnOff()
   digitalWrite(PumpPin, PumpManFlag);
 }
 
-// toggle alram on/off
 void AlarmOnOff()
 {
-
   AlarmManFlag = !AlarmManFlag;
   digitalWrite(AlarmPin, AlarmManFlag);
 }
 
-// blank
 void testFunct()
 {
 }
@@ -1473,14 +1229,12 @@ void testFunct()
 // Blank Display
 void DisplayOff(void)
 {
-
-  // DisplayState = OFF;
-  Serial.println("DisplayOff");
-  Serial.printf("DisplayOffSSWMode %i \n", SSWMode);
+  DisplayState = OFF;
+  // Serial.println("DisplayOff");
+  // Serial.printf("DisplayOffSSWMode %i \n",SSWMode);
   //  did we time out while in AutoControl and not in BT
-  if (SSWMode == 1) // && BTStatusFlag == OFF)
+  if (SSWMode <= 1) // && BTStatusFlag == OFF)
   {
-
     // Serial.printf("SSWMode %i \n",SSWMode);
     DisplayState = OFF;
     DisplayUpdateFlag = OFF;
@@ -1497,7 +1251,6 @@ void DisplayOff(void)
   }
 }
 
-// set off flag
 void DisplayOffSetFlag(void)
 {
   /* don't want to spend much time in callback
@@ -1505,33 +1258,53 @@ void DisplayOffSetFlag(void)
   DisplayOffFlag = ON;
 }
 
-// set flag / timer
 void DisplayOn(void)
 {
+
+  // if (DISPTimeOut <= 0) // did we time out
+  // {
   DisplayState = ON;
+  // if (SSWMode == 0) // && BTStatusFlag == OFF)
 
-  // only start display timeout in auto
-  if (AutoPositionFlag) //&& BTStatusFlag == OFF)
-  {
+  // Serial.println("DispOFFTimer");
+  DisplayOffTimer.once(DISP_TimeOut, DisplayOffSetFlag);
 
-    DisplayOffTimer.once(DISP_TimeOut, DisplayOffSetFlag);
-  }
-  else
-  {
-
-    DisplayOffTimer.detach();
-  }
+  // blank disp
+  // OLED_Display.clearDisplay();
+  // OLED_Display.display();
+  // DisplayUpdate();
+  //  if(SSWMode ==0 && BTStatusFlag == OFF){
+  //  DisplayOffTimer.once(DISP_TimeOut, DisplayOff);
+  // }
+  //  DisPlayTimer.attach_ms(DISP_interval, DisplayUpdate);
+  //  }
+  //  else // count down display timer
+  //  {
+  //    DISPTimeOut--;
+  //  Serial.print(" *****************DisTimr=");
+  //  Serial.print(DISPTimeOut);
+  // }
 }
 
 // stop CLPump
 void CLPumpOFF(void)
 {
 
+  // if (DISPTimeOut <= 0) // did we time out
+  // {
+
   digitalWrite(CLPumpPin, OFF);
+  // DEBUGPRINTLN("CLPump OFF Auto");
   CLPumpStatus = OFF;
+  // }
+  // else // count down display timer
+  // {
+  //   DISPTimeOut--;
+  // Serial.print(" *****************DisTimr=");
+  // Serial.print(DISPTimeOut);
+  //}
 }
 
-// set flag
 void DisplayUpdateSetFlag(void)
 {
   /* don't want to spend much time in callback
@@ -1545,20 +1318,19 @@ void DisplayUpdate(void)
   // Serial.println("DisplayUpdate()");
   if (BTStatusFlag == ON) // mode sw to auto BT ON
   {
-
     // Serial.println("DisplayUpdate() / DisplayState=ON / BTStatusFlag=ON");
     OLED_Display.clearDisplay();
     OLED_Display.setCursor(0, 0);
     OLED_Display.println("*** BT Connected! ***");
 
     DisplayLevelSensor(&OLED_Display, &Sensor_Level_Values);
-
+    // DisplayEnvSensor(&OLED_Display, &Sensor_Env_Values);
+    // OLED_Light(&OLED_Display, Count, &Sensor_Level_Values);
     OLED_Display.printf("Pump: %d\n", PumpStatus);
     OLED_Display.printf(" On: %d Off: %d\n", PumpOnLevel, PumpOffLevel);
     OLED_Display.printf("Alarm: %d\n", AlarmStatus);
     OLED_Display.printf(" On: %d Off: %d\n", AlarmOnLevel, AlarmOffLevel);
     OLED_Display.printf("CLPmp: %d\n", CLPumpStatus);
-
     int x = CLPump_RunTime;
     OLED_Display.printf(" RunTime: %d \n", x);
 
@@ -1568,17 +1340,33 @@ void DisplayUpdate(void)
 
   if (DisplayState == ON)
   {
-
     // Serial.println("DisplayUpdate() / DisplayState=ON");
     if (BTStatusFlag == OFF) //  BT OFF
     {
-
-      int CLPRT = CLPump_RunTime;
       // Serial.println("DisplayUpdate() / DisplayState=ON / BTStatusFlag=OFF");
       switch (SSWMode)
       {
-
       case 0: // encoder sw
+
+        /*         // OLED_Display.clearDisplay();
+                // OLED_Display.setCursor(0, 0);
+                // OLED_Display.print("Mode 0 = Bad");
+                // OLED_Display.display();
+
+                /*  // if Blanked and in auto Mode, when Encoder switch pressed it will turn on and update display
+                if (AutoManControl)
+                {
+
+                  OLED_Display.clearDisplay();
+                  OLED_Display.setCursor(0, 0);
+
+                  DisplayLevelSensor(&OLED_Display, &Sensor_Level_Values);
+                  // DisplayEnvSensor(&OLED_Display, &Sensor_Env_Values);
+
+                  OLED_Light(&OLED_Display, Count, &Sensor_Level_Values);
+
+                  OLED_Display.display();
+                }*/
 
         break;
 
@@ -1587,15 +1375,16 @@ void DisplayUpdate(void)
         OLED_Display.clearDisplay();
         OLED_Display.setCursor(0, 0);
 
-        DisplayLevelSensor(&OLED_Display, &Sensor_Level_Values); // level sensor value
-        OLED_Light(&OLED_Display, Count, &Sensor_Level_Values);  // sd write count
+        DisplayLevelSensor(&OLED_Display, &Sensor_Level_Values);
+        // DisplayEnvSensor(&OLED_Display, &Sensor_Env_Values);
 
+        OLED_Light(&OLED_Display, Count, &Sensor_Level_Values);
         OLED_Display.println("");
-        OLED_Display.printf("Alarm On:  %d\r\n", AlarmOnLevel);
-        OLED_Display.printf("Alarm Off: %d\r\n", AlarmOffLevel);
-        OLED_Display.printf("Pump On:   %d\r\n", PumpOnLevel);
-        OLED_Display.printf("PumpOff:   %d\r\n", PumpOffLevel);
-        OLED_Display.printf("CL Time:   %d\r\n", CLPRT);
+        OLED_Display.printf("Alarm On:  %d\r\n",AlarmOnLevel);
+        OLED_Display.printf("Alarm Off: %d\r\n",AlarmOffLevel);
+        OLED_Display.printf("Pump On:   %d\r\n",PumpOnLevel);
+        OLED_Display.printf("PumpOff:   %d\r\n",PumpOffLevel);
+        OLED_Display.printf("CL Time:   %d\r\n",CLPump_RunTime);
 
         OLED_Display.display();
         break;
@@ -1605,46 +1394,36 @@ void DisplayUpdate(void)
         AlarmMenu.build(&OLED_Display);
         if (SWEncoderFlag)
         {
-          MenuChoose(2);
           Serial.println("                AlarmMenuChoose");
-          
+          MenuChoose(2);
         }
         break;
 
-      case 3: // off 
+      case 3: // off /setup
 
         OLED_Display.clearDisplay();
         OLED_Display.setCursor(0, 0);
-        OLED_Display.setTextSize(2);
-        OLED_Display.println("System OFF");
-        OLED_Display.setTextSize(1);
-        OLED_Display.printf("Alarm On:  %d\r\n", AlarmOnLevel);
-        OLED_Display.printf("Alarm Off: %d\r\n", AlarmOffLevel);
-        OLED_Display.printf("Pump On:   %d\r\n", PumpOnLevel);
-        OLED_Display.printf("PumpOff:   %d\r\n", PumpOffLevel);
-        OLED_Display.printf("CL Time:   %d\r\n", CLPRT);
+
+        OLED_Display.println("Mode 3 = SetUp");
 
         OLED_Display.display();
-
+        // Serial.println("Mode 3 = Setup");
+        //  SWEncoderFlag = OFF;
 
         break;
 
-      case 4: // pump
-
-        // DisplayState = ON;
-
+      case 4:                          // pump
         PumpMenu.build(&OLED_Display); // display menu
         if (SWEncoderFlag)
         {
-
+          Serial.println("                PumpMenuChoose");
           MenuChoose(4);
-          Serial.printf("                PumpMenuChoose SWEncoderFlag %d", SWEncoderFlag);
+          Serial.printf("SWEncoderFlag %d", SWEncoderFlag);
         }
 
         break;
 
       default:
-
         OLED_Display.clearDisplay();
         OLED_Display.setCursor(0, 0);
 
@@ -1668,24 +1447,21 @@ void DisplayUpdate(void)
   }
 }
 
-// read rotary encoder and Push Button
+// read rotary encoder
 void rotary_loop()
 {
   ///////////////////////////////////// encoder
   if (rotaryEncoder->encoderChanged())
   {
-
     ENCValue = rotaryEncoder->readEncoder();
     if (SSWMode == 4) // if in Pump position change pump menu
     {
-
       PumpMenu.nodeIndex = ENCValue; // move enc value to menu
       Serial.printf("PMPENC: %d \n\r", ENCValue);
     }
 
     if (SSWMode == 2)
     {
-
       AlarmMenu.nodeIndex = ENCValue;
       Serial.printf("ALMENC: %d \n\r", ENCValue);
     }
@@ -1695,12 +1471,15 @@ void rotary_loop()
   if (rotaryEncoder->isEncoderButtonClicked())
   {
 
+    /////////////////debug
+    DisplayState = ON;
+
     if (DisplayState == OFF)
     {
-
-      Serial.println("SWEncoder DispON ");
-      DisplayOn();
-      DisplayUpdate();
+      // Serial.println("SWEncoder DispON ");
+      ////////////////////////////////////// cut DisplayOn();
+      // DisplayState = ON;
+      // DisplayUpdate();
     }
     else
     {
@@ -1708,13 +1487,11 @@ void rotary_loop()
       // only set flag inAlarm or Pump position
       if (PumpPositionFlag || AlarmPositionFlag)
       {
-
         SWEncoderFlag = ON;
         Serial.println("SWEncoderFlag On Pressed");
       }
       else // if you leave the SSW in Auto or Off, don't set flag for now. causes menu to change after SSW moved to any menu position
       {
-
         SWEncoderFlag = OFF;
         Serial.println("SWEncoderFlag Off Pressed");
       }
@@ -1729,18 +1506,59 @@ void pressed(Button2 &btn)
 
   /*****************************************************************************
    * *****************  temp  ***************************************************
-   * *************************************************************************/
+   * *************************************************************************
+  // btn = SSWAuto;
 
-  Serial.print("pressed ");
+          PumpStatus = OFF;
+        PumpManFlag = OFF;
+        AlarmStatus = OFF;
+        AlarmManFlag = OFF;
+        CLPumpStatus = OFF;
+      CLPumpManFlag = OFF;
+  ******************************/
+
+  // Serial.print("pressed ");
+  //  if (DisplayState == OFF)
+  //  {
+  //    Serial.println("SWEncoder DispON ");
+  //    // DisplayOn();
+  //    DisplayState = ON;
+  //    DisplayUpdate();
+  //  }
+  /*   if (btn == SWEncoder)
+    {
+      SSWMode = 0;
+      // Serial.println("SWEncoder ");
+
+      if (DisplayState == OFF)
+      {
+        // Serial.println("SWEncoder DispON ");
+        DisplayOn();
+        // DisplayState = ON;
+        // DisplayUpdate();
+      }
+      else
+      {
+        // Serial.println("SWEncoderFlag ");
+        SWEncoderFlag = ON;
+      }
+    } */
 
   // look at switch when BT NOT connected
   if (BTStatusFlag == OFF)
   {
-
     if (btn == SSWAuto)
     {
+      // Serial.println("SSWAuto");
 
-      Serial.println("SSWAuto");
+      if (SSWMode != 1)
+      {
+
+        DisplayOn();
+        // DisplayState = ON;
+        // DisplayUpdate();
+      }
+      SSWMode = 1;
 
       // keep track of SSW position
       PumpPositionFlag = OFF;
@@ -1749,31 +1567,19 @@ void pressed(Button2 &btn)
       AutoPositionFlag = ON;
 
       /* theses are set in prgam loop
-             PumpManFlag
-             AlarmManFlag
-        */
+           PumpManFlag
+           AlarmManFlag
+      */
 
       AutoManControl = ON;
-
-      if (SSWMode != 1)   // comming from another switch position
-      {
-      digitalWrite(PumpPin, OFF);
-      digitalWrite(AlarmPin, OFF);
-      digitalWrite(CLPumpPin, OFF);
-        SSWMode = 1;
-        DisplayOn();
-        // DisplayState = ON;
-        // DisplayUpdate();
-      }
+      // DisplayState = ON;
     }
-
     else if (btn == SSWAlarm)
     {
+      // Serial.println("SSWAlarm");
 
-      Serial.println("SSWAlarm");
+      SSWMode = 2; // may get rid of this and use flags below
 
-      SSWMode = 2;
-      // keep track of SSW position
       PumpPositionFlag = OFF;
       AlarmPositionFlag = ON;
       OffPositionFlag = OFF;
@@ -1786,8 +1592,8 @@ void pressed(Button2 &btn)
 
       if (DisplayState == OFF) // turn display on but do not restart screen off timer
       {
-
-        DisplayOn();
+        // DisplayOn();
+        DisplayState = ON;
         DisplayUpdate();
       }
 
@@ -1813,19 +1619,16 @@ void pressed(Button2 &btn)
       AlarmManFlag = OFF;
 
       AutoManControl = OFF;
-      digitalWrite(PumpPin, OFF);
-      digitalWrite(AlarmPin, OFF);
-      digitalWrite(CLPumpPin, OFF);
     }
     else if (btn == SSWPump)
     {
-      Serial.println("SSWPump");
+      // Serial.println("SSWPump");
       SSWMode = 4;
 
       PumpPositionFlag = ON;
       AlarmPositionFlag = OFF;
       OffPositionFlag = OFF;
-      AutoPositionFlag = OFF;
+      AutoPositionFlag = ON;
 
       PumpManFlag = OFF; // will be controlled by menu
       AlarmManFlag = OFF;
@@ -1834,7 +1637,8 @@ void pressed(Button2 &btn)
 
       if (DisplayState == OFF)
       {
-        DisplayOn();
+        // DisplayOn();
+        DisplayState = ON;
         DisplayUpdate();
       }
 
@@ -1886,20 +1690,20 @@ void Alarm(void)
   }
   else // manual control
   {
-    /*     if (AlarmManFlag == ON)
-        {
-          digitalWrite(AlarmPin, ON);
-          AlarmStatus = ON;
-          // DEBUGPRINT(" ManAlarmStatusON ");
-          //   DEBUGPRINTLN(AlarmStatus);
-        }
-        else
-        {
-          digitalWrite(AlarmPin, OFF);
-          AlarmStatus = OFF;
-          // DEBUGPRINT(" ManAlarmStatusOFF ");
-          //   DEBUGPRINTLN(AlarmStatus);
-        } */
+    if (AlarmManFlag == ON)
+    {
+      digitalWrite(AlarmPin, ON);
+      AlarmStatus = ON;
+      // DEBUGPRINT(" ManAlarmStatusON ");
+      //   DEBUGPRINTLN(AlarmStatus);
+    }
+    else
+    {
+      digitalWrite(AlarmPin, OFF);
+      AlarmStatus = OFF;
+      // DEBUGPRINT(" ManAlarmStatusOFF ");
+      //   DEBUGPRINTLN(AlarmStatus);
+    }
   }
 }
 
@@ -1912,7 +1716,7 @@ void Pump(void)
     {
       digitalWrite(PumpPin, ON);
       PumpStatus = ON;
-      Serial.println(" AutoPumpStatusON ");
+      // DEBUGPRINT(" AutoPumpStatusON ");
       // DEBUGPRINTLN(PumpStatus);
       CLPumpRunOnce = ON;
     }
@@ -1926,25 +1730,28 @@ void Pump(void)
     }
   }
   else // manual control
-  {         ///////////////////////////////////////////////////// maybe changes this to PumpOnOff
-
-/*     if (BTStatusFlag)
+  {
+    if (PumpManFlag == ON)
     {
-      if (PumpManFlag == ON)
+      digitalWrite(PumpPin, ON);
+      PumpStatus = ON;
+      // DEBUGPRINT("ManPumpStatusON ");
+      //  DEBUGPRINTLN(PumpStatus);
+
+      // limit pump level in man mode
+      if (Sensor_Level_Values.DepthMM <= 100) ////------------ change this level after testing with pump
       {
-        digitalWrite(PumpPin, ON);
-        PumpStatus = ON;
-        // DEBUGPRINT("ManPumpStatusON ");
-        //  DEBUGPRINTLN(PumpStatus);
+        //   digitalWrite(PumpPin, OFF);
+        //   PumpStatus = OFF;
       }
-      else
-      {
-        digitalWrite(PumpPin, OFF);
-        PumpStatus = OFF;
-        // DEBUGPRINT("ManPumpStatusOFF ");
-        //  DEBUGPRINTLN(PumpStatus);
-      }
-    } */
+    }
+    else
+    {
+      digitalWrite(PumpPin, OFF);
+      PumpStatus = OFF;
+      // DEBUGPRINT("ManPumpStatusOFF ");
+      //  DEBUGPRINTLN(PumpStatus);
+    }
   }
 }
 
@@ -1956,7 +1763,6 @@ void CLPump(void)
 
     if (CLPumpRunOnce == ON && PumpStatus == OFF)
     {
-
       delay(500);
       digitalWrite(CLPumpPin, ON);
       DEBUGPRINTLN("CLPump ON Auto");
@@ -1964,6 +1770,21 @@ void CLPump(void)
       CLPumpRunOnce = OFF; // set in pump()
       CLPumpTimer.once(CLPump_RunTime, CLPumpOFF);
     }
+    /*
+        // unsigned long CLP = millis();
+        if (CLPumpStatus == ON)
+        {
+
+          // if ((CLP - last_CLP_time) > (CLPump_RunTime * 1000))
+          // {
+
+            // last_CLP_time = CLP;
+
+            digitalWrite(CLPumpPin, OFF);
+            // DEBUGPRINTLN("CLPump OFF Auto");
+            CLPumpStatus = OFF;
+        //  }
+        } */
   }
   else // manual control
   {
