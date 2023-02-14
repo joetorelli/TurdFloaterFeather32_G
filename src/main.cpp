@@ -70,7 +70,7 @@
               done - get minimum pump run level for auto and manual
               done - need to add timer to CLPump currently on delay() = Ticker
               done - test Pump/Alarm ON > Pump/Alarm Off
-
+                      testing ssd1327
               inwork -
                   splitting files
                   menu system setup
@@ -79,7 +79,7 @@
 
               open -
                   add alarm if not in auto after some time
-                  
+
                   Connect to ESPHome
                   Vol adj to PWM for alarm works on screen
 
@@ -1123,7 +1123,7 @@ void PumpOnAdjust()
   SWEncoderFlag = OFF;
 
   // menu settings
-  rotaryEncoder->setBoundaries((PumpOffLevel+1), 3000, false);
+  rotaryEncoder->setBoundaries((PumpOffLevel + 1), 3000, false);
   rotaryEncoder->setAcceleration(4000);
   // put current Pump Hi level here
   rotaryEncoder->setEncoderValue(PumpOnLevel);
@@ -1169,7 +1169,7 @@ void PumpOnAdjust()
   SWEncoderFlag = OFF;
   ENCValue = 0;
   PumpMenu.nodeIndex = 0;
- // PumpMenu.choose();
+  // PumpMenu.choose();
 }
 
 void PumpOffAdjust()
@@ -1179,7 +1179,7 @@ void PumpOffAdjust()
   SWEncoderFlag = OFF;
 
   // menu settings
-  rotaryEncoder->setBoundaries(300, (PumpOnLevel-1), false);
+  rotaryEncoder->setBoundaries(300, (PumpOnLevel - 1), false);
   rotaryEncoder->setAcceleration(2000);
   // put current Pump Hi level here
   rotaryEncoder->setEncoderValue(PumpOffLevel);
@@ -1225,7 +1225,7 @@ void PumpOffAdjust()
   SWEncoderFlag = OFF;
   ENCValue = 0;
   PumpMenu.nodeIndex = 0;
-  //PumpMenu.choose();
+  // PumpMenu.choose();
 }
 
 void AlarmOnAdjust()
@@ -1234,7 +1234,7 @@ void AlarmOnAdjust()
   SWEncoderFlag = OFF;
 
   // menu settings
-  rotaryEncoder->setBoundaries((AlarmOffLevel+1), 3000, false);
+  rotaryEncoder->setBoundaries((AlarmOffLevel + 1), 3000, false);
   rotaryEncoder->setAcceleration(3000);
   // put current Pump Hi level here
   rotaryEncoder->setEncoderValue(AlarmOnLevel);
@@ -1280,7 +1280,7 @@ void AlarmOnAdjust()
   SWEncoderFlag = OFF;
   ENCValue = 0;
   AlarmMenu.nodeIndex = 0;
-  //PumpMenu.choose();
+  // PumpMenu.choose();
 }
 
 void AlarmOffAdjust()
@@ -1289,7 +1289,7 @@ void AlarmOffAdjust()
   SWEncoderFlag = OFF;
 
   // menu settings
-  rotaryEncoder->setBoundaries(0, (AlarmOnLevel-1), false);
+  rotaryEncoder->setBoundaries(0, (AlarmOnLevel - 1), false);
   rotaryEncoder->setAcceleration(3000);
   // put current Pump Hi level here
   rotaryEncoder->setEncoderValue(AlarmOffLevel);
@@ -1334,7 +1334,7 @@ void AlarmOffAdjust()
   SWEncoderFlag = OFF;
   ENCValue = 0;
   AlarmMenu.nodeIndex = 0;
-  //PumpMenu.choose();
+  // PumpMenu.choose();
 }
 
 void CLTimeAdjust()
@@ -1390,7 +1390,7 @@ void CLTimeAdjust()
   SWEncoderFlag = OFF;
   ENCValue = 0;
   PumpMenu.nodeIndex = 0;
-  //PumpMenu.choose();
+  // PumpMenu.choose();
 }
 
 void VolumeAdjust()
@@ -1446,7 +1446,7 @@ void VolumeAdjust()
   SWEncoderFlag = OFF;
   ENCValue = 0;
   PumpMenu.nodeIndex = 0;
-  //PumpMenu.choose();
+  // PumpMenu.choose();
 }
 
 // toggle pump on/off
@@ -1607,11 +1607,10 @@ void DisplayUpdate(void)
         {
           MenuChoose(2);
           Serial.println("                AlarmMenuChoose");
-          
         }
         break;
 
-      case 3: // off 
+      case 3: // off
 
         OLED_Display.clearDisplay();
         OLED_Display.setCursor(0, 0);
@@ -1625,7 +1624,6 @@ void DisplayUpdate(void)
         OLED_Display.printf("CL Time:   %d\r\n", CLPRT);
 
         OLED_Display.display();
-
 
         break;
 
@@ -1755,11 +1753,11 @@ void pressed(Button2 &btn)
 
       AutoManControl = ON;
 
-      if (SSWMode != 1)   // comming from another switch position
+      if (SSWMode != 1) // comming from another switch position
       {
-      digitalWrite(PumpPin, OFF);
-      digitalWrite(AlarmPin, OFF);
-      digitalWrite(CLPumpPin, OFF);
+        digitalWrite(PumpPin, OFF);
+        digitalWrite(AlarmPin, OFF);
+        digitalWrite(CLPumpPin, OFF);
         SSWMode = 1;
         DisplayOn();
         // DisplayState = ON;
@@ -1926,25 +1924,25 @@ void Pump(void)
     }
   }
   else // manual control
-  {         ///////////////////////////////////////////////////// maybe changes this to PumpOnOff
+  {    ///////////////////////////////////////////////////// maybe changes this to PumpOnOff
 
-/*     if (BTStatusFlag)
-    {
-      if (PumpManFlag == ON)
-      {
-        digitalWrite(PumpPin, ON);
-        PumpStatus = ON;
-        // DEBUGPRINT("ManPumpStatusON ");
-        //  DEBUGPRINTLN(PumpStatus);
-      }
-      else
-      {
-        digitalWrite(PumpPin, OFF);
-        PumpStatus = OFF;
-        // DEBUGPRINT("ManPumpStatusOFF ");
-        //  DEBUGPRINTLN(PumpStatus);
-      }
-    } */
+    /*     if (BTStatusFlag)
+        {
+          if (PumpManFlag == ON)
+          {
+            digitalWrite(PumpPin, ON);
+            PumpStatus = ON;
+            // DEBUGPRINT("ManPumpStatusON ");
+            //  DEBUGPRINTLN(PumpStatus);
+          }
+          else
+          {
+            digitalWrite(PumpPin, OFF);
+            PumpStatus = OFF;
+            // DEBUGPRINT("ManPumpStatusOFF ");
+            //  DEBUGPRINTLN(PumpStatus);
+          }
+        } */
   }
 }
 
