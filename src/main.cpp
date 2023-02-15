@@ -346,8 +346,8 @@ boolean SendAppDataFlag = OFF; // update flag
 
 /*******************   oled display   **************/
 // Declaration for an SSD1306 OLED_Display connected to I2C (SDA, SCL pins)
-Adafruit_SSD1306 OLED_Display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
-
+//Adafruit_SSD1306 OLED_Display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+Adafruit_SSD1327 display(128, 128, &Wire, OLED_RESET);
 /*******************  rtc  *************************/
 RTC_PCF8523 rtc; // on feather logger board
 
