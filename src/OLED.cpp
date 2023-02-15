@@ -4,7 +4,7 @@
 // #include "sensor_readings.h"
 
 
-void DisplayLevelSensor(Adafruit_SSD1306 *Disp, LevelSensor *SenLevVal)
+void DisplayLevelSensor(Adafruit_SSD1327 *Disp, LevelSensor *SenLevVal)
 {
     /*  SenLevVal Struct
         int ShuntVRaw = 0;
@@ -33,7 +33,7 @@ Disp->setTextSize(2);
 
 
 // just used to show save count on display
-void OLED_Light(Adafruit_SSD1306 *Disp, double LT, LevelSensor *SenLevVal)
+void OLED_Light(Adafruit_SSD1327 *Disp, double LT, LevelSensor *SenLevVal)
 {
 
     Disp->print("#");
@@ -45,7 +45,7 @@ void OLED_Light(Adafruit_SSD1306 *Disp, double LT, LevelSensor *SenLevVal)
 }
 
 // read and display button press
-void DisplaySwitches(Adafruit_SSD1306 *Disp, Select_SW *SS)
+void DisplaySwitches(Adafruit_SSD1327 *Disp, Select_SW *SS)
 { // line 1
     Disp->print("SSA:");
     if (SS->Switch_Auto == 0)
@@ -90,7 +90,7 @@ void DisplaySwitches(Adafruit_SSD1306 *Disp, Select_SW *SS)
 
 
 // BME Sensor
-void DisplayEnvSensor(Adafruit_SSD1306 *Disp, BME_Sensor *SenEnvVal)
+void DisplayEnvSensor(Adafruit_SSD1327 *Disp, BME_Sensor *SenEnvVal)
 // Adafruit_BME280 *bme)
 { // line 3
     // Disp->println();
@@ -145,7 +145,7 @@ void DisplayEnvSensor(Adafruit_SSD1306 *Disp, BME_Sensor *SenEnvVal)
 
 
 
-void OLED_Time(Adafruit_SSD1306 *Disp, DateTime *RTCClk)
+void OLED_Time(Adafruit_SSD1327 *Disp, DateTime *RTCClk)
 { // line 2
 
     Disp->println();
@@ -172,7 +172,7 @@ void OLED_Time(Adafruit_SSD1306 *Disp, DateTime *RTCClk)
     Disp->print(RTCClk->second(), DEC);
 }
 
-void OLED_Date(Adafruit_SSD1306 *Disp, DateTime *RTCClk)
+void OLED_Date(Adafruit_SSD1327 *Disp, DateTime *RTCClk)
 { // line 2
     Disp->print(" ");
     if (RTCClk->day() < 10)
@@ -198,7 +198,7 @@ void OLED_Date(Adafruit_SSD1306 *Disp, DateTime *RTCClk)
     Disp->println(RTCClk->year(), DEC);
 }
 
-void OLED_Day(Adafruit_SSD1306 *Disp, DateTime *RTCClk)
+void OLED_Day(Adafruit_SSD1327 *Disp, DateTime *RTCClk)
 
 {
     char daysOfTheWeek[7][12] = {" Sunday", " Monday", " Tuesday", " Wednesday", " Thursday", " Friday", " Saturday"};
@@ -210,7 +210,7 @@ void OLED_Day(Adafruit_SSD1306 *Disp, DateTime *RTCClk)
 
 
 
-/* void OLED_Range(Adafruit_SSD1306 *Disp, SRFRanges *Rngs)
+/* void OLED_Range(Adafruit_SSD1327 *Disp, SRFRanges *Rngs)
 {
     Disp->print(" Rng: ");
     Disp->print(Rngs->Range);

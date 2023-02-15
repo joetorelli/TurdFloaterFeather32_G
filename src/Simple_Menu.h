@@ -8,8 +8,8 @@
 #define SIMPLE_MENU_H
 
 #include <Arduino.h>
-
-#include <Adafruit_SSD1306.h>
+#include <Adafruit_SSD1327.h>
+// #include <Adafruit_SSD1306.h>
 
 /* #define SCREEN_WIDTH 128 // OLED display width, in pixels
 #define SCREEN_HEIGHT 64 // OLED display height, in pixels
@@ -114,7 +114,8 @@ public:
 
   void addNode(char *nodeName, char nodeType, void (*functPtr)(void));
   void setName(char *namePtr);
-  void buildmenu(char index, Adafruit_SSD1306 *Disp);
+  // void buildmenu(char index, Adafruit_SSD1306 *Disp);
+  void buildmenu(char index, Adafruit_SSD1327 *Disp);
 };
 
 /*  ---------------------------------------------------------------------------------------------------------------------/
@@ -153,7 +154,8 @@ public:
   // During configuration, keeps track of the node most recently created for linking purposes
   int nodeLinkIndex = 0;
 
-  void build(Adafruit_SSD1306 *Disp);
+  // void build(Adafruit_SSD1306 *Disp);
+  void build(Adafruit_SSD1327 *Disp);
   void addMenu(char *menuName, int index);
   void addNode(char *nodeName, char nodeType, void (*functPtr)(void));
   void linkNode(int menuNum);
@@ -169,6 +171,7 @@ public:
 // -----------------  /_/     /____/  /_/  \_/  /____/    /_/     /___/  /_____/  /_/  \_/  /_____/ ------------------- //
 // -------------------------------------------------------------------------------------------------------------------- //
 
-void oledSystemInit(Adafruit_SSD1306 *Disp);
+// void oledSystemInit(Adafruit_SSD1306 *Disp);
+void oledSystemInit(Adafruit_SSD1327 *Disp);
 
 #endif

@@ -187,7 +187,7 @@ void menu::setName(char *namePtr)
 | Date:       December 14,2022
 | Edited:     {Date}
 ----------------------------------------------------------------------------------------------------------------------*/
-void menu::buildmenu(char nodeIndex, Adafruit_SSD1306 *Disp)
+void menu::buildmenu(char nodeIndex, Adafruit_SSD1327 *Disp)
 {
   // Clear the display
   Disp->clearDisplay();
@@ -266,7 +266,7 @@ void menu::buildmenu(char nodeIndex, Adafruit_SSD1306 *Disp)
 | Date:       December 14,2022
 | Edited:     {Date}
 ----------------------------------------------------------------------------------------------------------------------*/
-void menuFrame::build(Adafruit_SSD1306 *Disp)
+void menuFrame::build(Adafruit_SSD1327 *Disp)
 {
   // Calls the build function from the menu object currently indexed. It is displayed at the menu object level to allow
   // the user to call it from dynamically within the menu if desired.
@@ -503,13 +503,13 @@ void menuFrame::back()
 | Date:       December 16, 2022
 | Edited:     {Date}
 ----------------------------------------------------------------------------------------------------------------------*/
-void oledSystemInit(Adafruit_SSD1306 *Disp)
+void oledSystemInit(Adafruit_SSD1327 *Disp)
 {
   // Modified to allow call from main
   // SSD1306_SWITCHCAPVCC = generate display voltage from 3.3V internally
-  if (!Disp->begin(SSD1306_SWITCHCAPVCC, 0x3C))
+  if (!Disp->begin(0x3C))
   {
-    Serial.println(F("SSD1306 allocation failed"));
+    Serial.println(F("SSD1327 allocation failed"));
     for (;;)
       ; // Don't proceed, loop forever
   }
@@ -518,9 +518,9 @@ void oledSystemInit(Adafruit_SSD1306 *Disp)
 
     Disp->clearDisplay();
     Disp->setCursor(0, 0);
-    Disp->println("SSD1306 Init");
+    Disp->println("SSD1327 Init");
     Disp->display();
-    Serial.println("SSD1306 Init");
+    Serial.println("SSD1327 Init");
     delay(1000);
   }
   Disp->cp437(true); // Use full 256 char 'Code Page 437' font
