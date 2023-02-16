@@ -78,6 +78,7 @@
               inwork -
                   splitting files
                   menu system setup
+                  adding diags to menu start
 
 
 
@@ -295,6 +296,7 @@ double Count = 0;            // used for log save count
 boolean SDConnectOK = ON;    // SD card valid
 boolean WiFiConnected = OFF; // WIFI Connected
 byte SetUpFlag = 0;          ///////////////// oled menu inwork
+int ChanNum = 0;
 
 /******************* eeprom ******************/
 Preferences Settings; // NVM
@@ -303,7 +305,7 @@ Preferences Settings; // NVM
 *******************  Sub/Function Declarations
 **********************************************************************/
 
-void ReadLevelSensor(SDL_Arduino_INA3221 *LevSensor, LevelSensor *SensorLevelVal);
+// void ReadLevelSensor(SDL_Arduino_INA3221 *LevSensor, LevelSensor *SensorLevelVal, int Chan);
 
 void WriteData(void); // save to eprom
 
@@ -373,7 +375,11 @@ SDL_Arduino_INA3221 ina3221(_INA_addr, 6205, 7530, 8220); // 6170, 7590, 8200);
 //  need to add test condition for <4ma(open) and >20ma (fault)
 struct LevelSensor Sensor_Level_Values;
 // values for 3 chan
+const int Chan1 = 0;
+const int Chan2 = 1;
+const int Chan3 = 2;
 
+int StatusSensor = 0;
 /***********************  encoder  *********************/
 // AiEsp32RotaryEncoder rotaryEncoder = AiEsp32RotaryEncoder(ROTARY_ENCODER_A_PIN, ROTARY_ENCODER_B_PIN, ROTARY_ENCODER_BUTTON_PIN, ROTARY_ENCODER_VCC_PIN, ROTARY_ENCODER_STEPS);
 AiEsp32RotaryEncoder *rotaryEncoder = new AiEsp32RotaryEncoder(ROTARY_ENCODER_A_PIN, ROTARY_ENCODER_B_PIN, ROTARY_ENCODER_BUTTON_PIN, ROTARY_ENCODER_VCC_PIN, ROTARY_ENCODER_STEPS);
@@ -415,6 +421,8 @@ menuFrame TestMenu;  // runs when Program Starts
 
 // menu call functions
 void testFunct();
+void TestSensor();
+void TestPwrSupply();
 void PumpOnAdjust();
 void PumpOffAdjust();
 void AlarmOnAdjust();
@@ -492,7 +500,6 @@ void setup()
   OLED_Display.setTextColor(SSD1327_WHITE);
   OLED_Display.setContrast(0x7F);
 
-
   // **********************   wifi   *********************** //
   DEBUGPRINT("Connect to SSID: ");
   DEBUGPRINTLN(WIFI_SSID);
@@ -523,7 +530,7 @@ void setup()
     {
       OLED_Display.clearDisplay();
       OLED_Display.display();
-      OLED_Display.print("Time out Restarting");
+      OLED_Display.print("Network Time out");
       OLED_Display.display();
       delay(1000);
       break;
@@ -550,7 +557,9 @@ void setup()
     DEBUGPRINTLN(WiFi.localIP());
 
     // display connection on oled
+
     // OLED_Display.println(""); // line 3
+    OLED_Display.println("");
     OLED_Display.print("Connected");
     OLED_Display.println("IP:");
     OLED_Display.print(WiFi.localIP());
@@ -702,6 +711,7 @@ void setup()
   // Initialize SD card
   OLED_Display.println("Init SDCard");
   OLED_Display.display();
+  delay(1000);
   DEBUGPRINTLN("Initializing SD card...");
   SD.begin(SD_CS);
   if (!SD.begin(SD_CS))
@@ -761,12 +771,13 @@ void setup()
   ina3221.begin();
   // Serial.println("ina3221.begin");
   //  en/dis channel as needed. effects response time
-  //  ina3221.setChannelEnable(INA3221_CH1);
+  ina3221.setChannelEnable(INA3221_CH1);
   ina3221.setChannelEnable(INA3221_CH2);
-  // ina3221.setChannelEnable(INA3221_CH3);
-  ina3221.setChannelDisable(INA3221_CH1);
-  // ina3221.setChannelDisable(INA3221_CH2);
-  ina3221.setChannelDisable(INA3221_CH3);
+  ina3221.setChannelEnable(INA3221_CH3);
+
+  // ina3221.setChannelDisable(INA3221_CH1);
+  //  ina3221.setChannelDisable(INA3221_CH2);
+  // ina3221.setChannelDisable(INA3221_CH3);
 
   // values for avg, effects response time
   ina3221.setAveragingMode(INA3221_REG_CONF_AVG_64);
@@ -921,7 +932,7 @@ void setup()
   // Testing menu
   TestMenu.addMenu("Testing", 0);
   TestMenu.addNode("PowerSupply", ACT_NODE, &testFunct);
-  TestMenu.addNode("Sensor", ACT_NODE, &testFunct);
+  TestMenu.addNode("Sensor", ACT_NODE, &TestSensor);
   TestMenu.addNode("ON/OFF", ACT_NODE, &testFunct);
   TestMenu.nodeIndex = 0;
 
@@ -933,6 +944,7 @@ void setup()
 
   TestMenu.nodeIndex = 1;
   TestMenu.build(&OLED_Display);
+  TestMenu.choose();
   delay(500);
 
   TestMenu.nodeIndex = 2;
@@ -1080,7 +1092,8 @@ void loop()
   // called from timer->SensorReadSetFlag->SensorReadFlag=ON
   if (SensorReadFlag == ON)
   {
-    SensorRead();
+    // SensorRead();
+    ReadLevelSensor(&ina3221, &Sensor_Level_Values, Chan2);
     SensorReadFlag = OFF;
   }
 
@@ -1480,6 +1493,91 @@ void AlarmToggle()
 void testFunct()
 {
 }
+void TestPwrSupply()
+{
+}
+void TestSensor()
+{
+  
+
+  // set up display
+  OLED_Display.clearDisplay();
+  OLED_Display.setCursor(0, 0);
+  OLED_Display.setTextSize(2);
+
+  OLED_Display.println("-Snsr Tst-");
+  OLED_Display.setCursor(0, 20);
+  // OLED_Display.printf(" %d", ENCValue);
+  // OLED_Display.setCursor(80, 20);
+  // OLED_Display.println("MM");
+
+  OLED_Display.setTextSize(1);
+  // OLED_Display.println("");
+  OLED_Display.println("Please wait...");
+  OLED_Display.display();
+
+  for (int i = 0; i <= 6; i++)
+  {
+    StatusSensor = ReadLevelSensor(&ina3221, &Sensor_Level_Values, Chan2);
+    delay(100);
+  }
+
+  switch (StatusSensor)
+  {
+
+  case 0:
+  OLED_Display.println("");
+  OLED_Display.setTextSize(2);
+    OLED_Display.println("Passed");
+    OLED_Display.setTextSize(1);
+    OLED_Display.display();
+    delay(1000);
+    break;
+
+  case 1:
+    OLED_Display.setTextSize(2);
+    OLED_Display.println("Sensor Not Found");
+    OLED_Display.setTextSize(1);
+    OLED_Display.println("");
+    OLED_Display.println("Check Sensor I/F");
+    OLED_Display.println(" Connections");
+    OLED_Display.println("");
+    OLED_Display.println("Check Sensor Wiring");
+    OLED_Display.println("");
+    OLED_Display.println("Replace Sensor");
+    OLED_Display.display();
+    delay(10000);
+    break;
+
+  case 2:
+    OLED_Display.setTextSize(2);
+    OLED_Display.println("Sensor");
+    OLED_Display.println("Failed");
+    OLED_Display.setTextSize(1);
+    OLED_Display.println("");
+    OLED_Display.println("Sensor Bad");
+    OLED_Display.println("");
+    OLED_Display.println("Replace Sensor");
+    OLED_Display.display();
+    delay(10000);
+    break;
+
+  default:
+    OLED_Display.setTextSize(2);
+    OLED_Display.println("Something wrong");
+    OLED_Display.setTextSize(1);
+    OLED_Display.println("");
+    OLED_Display.println("Push Reset");
+    OLED_Display.println("");
+    OLED_Display.println("Check PS");
+    OLED_Display.display();
+    delay(10000);
+    break;
+  }
+
+  // OLED_Display.print(("   Press to enter"));
+  // OLED_Display.display();
+}
 
 // Blank Display
 void DisplayOff(void)
@@ -1861,14 +1959,14 @@ void pressed(Button2 &btn)
       // set rotary 0-4 menu items, also must match in all the Adjust functions
       rotaryEncoder->setBoundaries(0, 4, false); // dosen't work good in true
     }
-    
+
     else
     {
       // Serial.println("no button");
       // //SSWMode = 0;
     }
   }
-  
+
   else // BT mode pretend SSW always in Auto Position
   {
 
@@ -1948,23 +2046,20 @@ void Pump(void)
   else // manual control
   {    ///////////////////////////////////////////////////// maybe changes this to PumpToggle
 
-      
-        
-          if (PumpManFlag == ON)
-          {
-            digitalWrite(PumpPin, ON);
-            PumpStatus = ON;
-            Serial.println("ManPumpStatusON ");
-            //  DEBUGPRINTLN(PumpStatus);
-          }
-          else
-          {
-            digitalWrite(PumpPin, OFF);
-            PumpStatus = OFF;
-            Serial.println("ManPumpStatusOFF ");
-            //  DEBUGPRINTLN(PumpStatus);
-          }
-         
+    if (PumpManFlag == ON)
+    {
+      digitalWrite(PumpPin, ON);
+      PumpStatus = ON;
+      Serial.println("ManPumpStatusON ");
+      //  DEBUGPRINTLN(PumpStatus);
+    }
+    else
+    {
+      digitalWrite(PumpPin, OFF);
+      PumpStatus = OFF;
+      Serial.println("ManPumpStatusOFF ");
+      //  DEBUGPRINTLN(PumpStatus);
+    }
   }
 }
 
@@ -2531,13 +2626,8 @@ void SensorReadSetFlag()
 }
 
 // get sensor value
-void SensorRead()
-{
-  // DEBUGPRINTLN("Read sensor***********");
-  //  ReadEnvSensor(&bme, &Sensor_Env_Values);
 
-  ReadLevelSensor(&ina3221, &Sensor_Level_Values);
-}
+// ReadLevelSensor(&ina3221, &Sensor_Level_Values, SensorChannel);
 
 void SD_UpdateSetFlag()
 {
