@@ -70,11 +70,14 @@
               done - get minimum pump run level for auto and manual
               done - need to add timer to CLPump currently on delay() = Ticker
               done - test Pump/Alarm ON > Pump/Alarm Off
+              done - show oled when connected to BT
+              done - moved to ssd1327 1.5" 128x128 oled display
+
 
               inwork -
                   splitting files
                   menu system setup
-                  show oled when connected to BT
+
 
 
               open -
@@ -144,7 +147,7 @@
 #include <Arduino.h>
 #include <Preferences.h> //NVM
 #include <WiFi.h>
-#include <Ticker.h>
+#include <Ticker.h> //non blocking timer
 
 #include "Wire.h"
 #include "network_config.h"
@@ -152,9 +155,7 @@
 #include "settings.h"        // The order is important! for nvm
 #include "sensor_readings.h" // The order is important!
 
-// #include <ezTime.h>
 #include "time.h"
-////#include <TaskScheduler.h>
 #include "RTClib.h"
 
 #include "OLED.h"
@@ -162,7 +163,6 @@
 #include "Simple_Menu.h"
 #include "Button2.h"
 #include "AiEsp32RotaryEncoder.h"
-// #include "AiEsp32RotaryEncoderNumberSelector.h"
 
 // #include <driver/adc.h> //adc
 // #include "INA3221.h"   // included in sensor_READINGS.H
@@ -276,11 +276,12 @@ Ticker DisPlayTimer;    // how often to update OLED
 Ticker DisplayOffTimer; // when to blank display
 Ticker CLPumpTimer;     // how long to run CLPump
 
-float SD_interval = 6;              // sec for updating file on sd card
+//// time intervals
+float SD_interval = 60;             // sec for updating file on sd card
 unsigned int APP_interval = 500;    // ms for updating BT panel
 unsigned int Sensor_interval = 250; // ms for sensor reading
 unsigned int DISP_interval = 250;   // ms for oled disp data update
-float DISP_TimeOut = 15;            // sec how long before blank screen
+float DISP_TimeOut = 150;           // sec how long before blank screen
 float CLPump_RunTime = 5;           // sec for CL Pump to run
 
 /**************************** Switches ****************************/
@@ -346,15 +347,16 @@ boolean SendAppDataFlag = OFF; // update flag
 
 /*******************   oled display   **************/
 // Declaration for an SSD1306 OLED_Display connected to I2C (SDA, SCL pins)
-//Adafruit_SSD1306 OLED_Display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
-Adafruit_SSD1327 OLED_Display(128, 128, &Wire, OLED_RESET);
+// Adafruit_SSD1306 OLED_Display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+// 1000000=i2c clk during ssd,  1000000=i2c clk after ssd
+Adafruit_SSD1327 OLED_Display(128, 128, &Wire, OLED_RESET, 1000000, 1000000);
 /*******************  rtc  *************************/
 RTC_PCF8523 rtc; // on feather logger board
 
 char daysOfTheWeek[7][12] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
 const char *ntpServer = "pool.ntp.org";
 const long gmtOffset_sec = -6 * 60 * 60;
-const int daylightOffset_sec = 0; // DISPTimeOut;
+const int daylightOffset_sec = 0;
 struct tm timeinfo;
 
 /**********************  ina3221  ********************/
@@ -485,7 +487,7 @@ void setup()
   // set up parameters
   OLED_Display.setRotation(ROTATION);
   OLED_Display.setTextSize(1);
-  //OLED_Display.setTextColor(SSD1306_WHITE);
+  OLED_Display.setTextColor(SSD1327_WHITE);
 
   // **********************   wifi   *********************** //
   DEBUGPRINT("Connect to SSID: ");
@@ -922,6 +924,7 @@ void setup()
   TestMenu.nodeIndex = 0;
 
   /****************   test menu run **********/
+  OLED_Display.setTextColor(SSD1327_WHITE);
   TestMenu.build(&OLED_Display);
   // OLED_Display.display();
   delay(500);
