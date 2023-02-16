@@ -380,6 +380,7 @@ const int Chan2 = 1;
 const int Chan3 = 2;
 
 int StatusSensor = 0;
+int StatusPS = 0;
 /***********************  encoder  *********************/
 // AiEsp32RotaryEncoder rotaryEncoder = AiEsp32RotaryEncoder(ROTARY_ENCODER_A_PIN, ROTARY_ENCODER_B_PIN, ROTARY_ENCODER_BUTTON_PIN, ROTARY_ENCODER_VCC_PIN, ROTARY_ENCODER_STEPS);
 AiEsp32RotaryEncoder *rotaryEncoder = new AiEsp32RotaryEncoder(ROTARY_ENCODER_A_PIN, ROTARY_ENCODER_B_PIN, ROTARY_ENCODER_BUTTON_PIN, ROTARY_ENCODER_VCC_PIN, ROTARY_ENCODER_STEPS);
@@ -1493,12 +1494,86 @@ void AlarmToggle()
 void testFunct()
 {
 }
-void TestPwrSupply()
+void TestPwrSupply(int PSType)
 {
+
+  // set up display
+  OLED_Display.clearDisplay();
+  OLED_Display.setCursor(0, 0);
+  OLED_Display.setTextSize(2);
+
+  OLED_Display.println("-Snsr Tst-");
+  OLED_Display.setCursor(0, 20);
+  // OLED_Display.printf(" %d", ENCValue);
+  // OLED_Display.setCursor(80, 20);
+  // OLED_Display.println("MM");
+
+  OLED_Display.setTextSize(1);
+  // OLED_Display.println("");
+  OLED_Display.println("Please wait...");
+  OLED_Display.display();
+
+  for (int i = 0; i <= 6; i++)
+  {
+    StatusPS = ReadLevelSensor(&ina3221, &Sensor_Level_Values, Chan1);
+    delay(100);
+  }
+
+  switch (StatusPS)
+  {
+
+  case 0:
+    OLED_Display.println("");
+    OLED_Display.setTextSize(2);
+    OLED_Display.println("Passed");
+    OLED_Display.setTextSize(1);
+    OLED_Display.display();
+    delay(1000);
+    break;
+
+  case 1:
+    OLED_Display.setTextSize(2);
+    OLED_Display.println("Sensor Not Found");
+    OLED_Display.setTextSize(1);
+    OLED_Display.println("");
+    OLED_Display.println("Check Sensor I/F");
+    OLED_Display.println(" Connections");
+    OLED_Display.println("");
+    OLED_Display.println("Check Sensor Wiring");
+    OLED_Display.println("");
+    OLED_Display.println("Replace Sensor");
+    OLED_Display.display();
+    delay(10000);
+    break;
+
+  case 2:
+    OLED_Display.setTextSize(2);
+    OLED_Display.println("Sensor");
+    OLED_Display.println("Failed");
+    OLED_Display.setTextSize(1);
+    OLED_Display.println("");
+    OLED_Display.println("Sensor Bad");
+    OLED_Display.println("");
+    OLED_Display.println("Replace Sensor");
+    OLED_Display.display();
+    delay(10000);
+    break;
+
+  default:
+    OLED_Display.setTextSize(2);
+    OLED_Display.println("Something wrong");
+    OLED_Display.setTextSize(1);
+    OLED_Display.println("");
+    OLED_Display.println("Push Reset");
+    OLED_Display.println("");
+    OLED_Display.println("Check PS");
+    OLED_Display.display();
+    delay(10000);
+    break;
+  }
 }
 void TestSensor()
 {
-  
 
   // set up display
   OLED_Display.clearDisplay();
@@ -1526,8 +1601,8 @@ void TestSensor()
   {
 
   case 0:
-  OLED_Display.println("");
-  OLED_Display.setTextSize(2);
+    OLED_Display.println("");
+    OLED_Display.setTextSize(2);
     OLED_Display.println("Passed");
     OLED_Display.setTextSize(1);
     OLED_Display.display();
