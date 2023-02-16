@@ -193,7 +193,7 @@ void menu::buildmenu(char nodeIndex, Adafruit_SSD1327 *Disp)
   Disp->clearDisplay();
   // OLED_Clr(&OLED_Display);
 
-  Disp->setTextColor(WHITE); // Draw white text
+  Disp->setTextColor(SSD1327_WHITE); // Draw white text
   Disp->setCursor(0, 0);     // Start at top-left corner
 
   // Use larger text font for menu name

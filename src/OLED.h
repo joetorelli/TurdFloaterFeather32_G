@@ -16,8 +16,9 @@
 /******************   OLED_Display  *******************/
 #define SCREEN_WIDTH 128  //  OLED_Display width, in pixels
 #define SCREEN_HEIGHT 128 //  OLED_Display height, in pixels
-// Configure orientation of the display.
-// 0 = none, 1 = 90 degrees clockwise, 2 = 180 degrees, 3 = 270 degrees CW
+// #define SCREEN_HEIGHT 64 //  OLED_Display height, in pixels
+//  Configure orientation of the display.
+//  0 = none, 1 = 90 degrees clockwise, 2 = 180 degrees, 3 = 270 degrees CW
 #define ROTATION 0
 
 #define OLED_RESET -1 // Reset pin # (or -1 if sharing Arduino reset pin)
