@@ -237,7 +237,8 @@ void menu::buildmenu(char nodeIndex, Adafruit_SSD1327 *Disp)
       // Display menu name to OLED
       Disp->write(this->node[i].name);
       Disp->write("\n");
-
+      ////////////
+Disp->write("\n");
       // Serial.println(this->node[i].name);
     }
   }

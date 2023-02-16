@@ -61,9 +61,9 @@
               done - rtc  use for time stamp on logger may not be used later
               done - ntp  use set time on rtc may not be used later
               done - bme
-              done  - analog sensor with 4-20 board
-              done  -sd card   use for storage on logger may not be used later
-              added - load voltage
+              done - analog sensor with 4-20 board
+              done - sd card   use for storage on logger may not be used later
+              done - added load voltage
               done - added map function
               done - Adjust range to inches/mm
               done - oled on/off control in software disabled for now in DisplayOff
@@ -72,6 +72,7 @@
               done - test Pump/Alarm ON > Pump/Alarm Off
               done - show oled when connected to BT
               done - moved to ssd1327 1.5" 128x128 oled display
+              done - added CLPump on/off
 
 
               inwork -
@@ -420,8 +421,9 @@ void AlarmOnAdjust();
 void AlarmOffAdjust();
 void CLTimeAdjust();
 void VolumeAdjust();
-void PumpOnOff();
-void AlarmOnOff();
+void PumpToggle();
+void AlarmToggle();
+void CLPumpToggle();
 void MenuChoose(int Mode);
 
 /********  physical poistion of SSW ***********/
@@ -488,6 +490,8 @@ void setup()
   OLED_Display.setRotation(ROTATION);
   OLED_Display.setTextSize(1);
   OLED_Display.setTextColor(SSD1327_WHITE);
+  OLED_Display.setContrast(0x7F);
+
 
   // **********************   wifi   *********************** //
   DEBUGPRINT("Connect to SSID: ");
@@ -624,6 +628,7 @@ void setup()
     OLED_Display.setCursor(0, 0);
     OLED_Display.display();
     OLED_Display.println("RTC Init");
+    delay(1000);
   }
 
   if (!rtc.initialized())
@@ -901,18 +906,15 @@ void setup()
   //  mainMenu.linkNode(1);
   //  // Submenu 1
   //  mainMenu.addMenu("Pump mm", 1);
-  PumpMenu.addNode("ON/OFF", ACT_NODE, &PumpOnOff);
+  PumpMenu.addNode("ON/OFF", ACT_NODE, &PumpToggle);
   PumpMenu.addNode("On Level", ACT_NODE, &PumpOnAdjust);
   PumpMenu.addNode("Off Level", ACT_NODE, &PumpOffAdjust);
+  PumpMenu.addNode("CL ON/OFF", ACT_NODE, &CLPumpToggle);
   PumpMenu.addNode("CL Time", ACT_NODE, &CLTimeAdjust);
 
   // Alarm Menu
   AlarmMenu.addMenu("Alarm", 0);
-  // mainMenu.addNode("Pump Levels", SUB_NODE, NULL);
-  //  mainMenu.linkNode(1);
-  //  // Submenu 1
-  //  mainMenu.addMenu("Pump mm", 1);
-  AlarmMenu.addNode("ON/OFF", ACT_NODE, &AlarmOnOff);
+  AlarmMenu.addNode("ON/OFF", ACT_NODE, &AlarmToggle);
   AlarmMenu.addNode("On Level", ACT_NODE, &AlarmOnAdjust);
   AlarmMenu.addNode("Off Level", ACT_NODE, &AlarmOffAdjust);
 
@@ -1159,13 +1161,12 @@ void PumpOnAdjust()
   }
   // Serial.println("Left loop");
   //  may have to save changes here
-  PumpOnLevel = ENCValue;
+  PumpOnLevel = ENCValue; // put encvalue into pump level
   WriteData();
-  // put encvalue into pump level high
 
   // go back to Pump menu
   // set up menu settings for pump
-  rotaryEncoder->setBoundaries(0, 3, false);
+  rotaryEncoder->setBoundaries(0, 4, false); // set encoder range for number of menu items
   rotaryEncoder->setAcceleration(0);
   rotaryEncoder->setEncoderValue(0); // stop indicator from jumping on next screen
 
@@ -1215,13 +1216,12 @@ void PumpOffAdjust()
   }
   // Serial.println("Left loop");
   //  may have to save changes here
-  PumpOffLevel = ENCValue;
+  PumpOffLevel = ENCValue; // put encvalue into pump level high
   WriteData();
-  // put encvalue into pump level high
 
   // go back to Pump menu
   // set up menu settings for pump
-  rotaryEncoder->setBoundaries(0, 3, false);
+  rotaryEncoder->setBoundaries(0, 4, false);
   rotaryEncoder->setAcceleration(0);
   rotaryEncoder->setEncoderValue(0); // stop indicator from jumping on next screen
 
@@ -1274,7 +1274,7 @@ void AlarmOnAdjust()
   WriteData();
   // put encvalue into pump level high
 
-  // go back to Pump menu
+  // go back to Alarm menu
   // set up menu settings for pump
   rotaryEncoder->setBoundaries(0, 2, false);
   rotaryEncoder->setAcceleration(0);
@@ -1453,15 +1453,23 @@ void VolumeAdjust()
 }
 
 // toggle pump on/off
-void PumpOnOff()
+void PumpToggle()
 {
 
   PumpManFlag = !PumpManFlag;
   digitalWrite(PumpPin, PumpManFlag);
 }
 
+// toggle clpump on/off
+void CLPumpToggle()
+{
+
+  CLPumpManFlag = !CLPumpManFlag;
+  digitalWrite(CLPumpPin, CLPumpManFlag);
+}
+
 // toggle alram on/off
-void AlarmOnOff()
+void AlarmToggle()
 {
 
   AlarmManFlag = !AlarmManFlag;
@@ -1594,10 +1602,10 @@ void DisplayUpdate(void)
         OLED_Light(&OLED_Display, Count, &Sensor_Level_Values);  // sd write count
 
         OLED_Display.println("");
-        OLED_Display.printf("Alarm On:  %d\r\n", AlarmOnLevel);
-        OLED_Display.printf("Alarm Off: %d\r\n", AlarmOffLevel);
-        OLED_Display.printf("Pump On:   %d\r\n", PumpOnLevel);
-        OLED_Display.printf("PumpOff:   %d\r\n", PumpOffLevel);
+        OLED_Display.printf("Alarm On:  %d\r\n\n", AlarmOnLevel);
+        OLED_Display.printf("Alarm Off: %d\r\n\n", AlarmOffLevel);
+        OLED_Display.printf("Pump On:   %d\r\n\n", PumpOnLevel);
+        OLED_Display.printf("PumpOff:   %d\r\n\n", PumpOffLevel);
         OLED_Display.printf("CL Time:   %d\r\n", CLPRT);
 
         OLED_Display.display();
@@ -1620,11 +1628,12 @@ void DisplayUpdate(void)
         OLED_Display.setTextSize(2);
         OLED_Display.println("System OFF");
         OLED_Display.setTextSize(1);
-        OLED_Display.printf("Alarm On:  %d\r\n", AlarmOnLevel);
-        OLED_Display.printf("Alarm Off: %d\r\n", AlarmOffLevel);
-        OLED_Display.printf("Pump On:   %d\r\n", PumpOnLevel);
-        OLED_Display.printf("PumpOff:   %d\r\n", PumpOffLevel);
-        OLED_Display.printf("CL Time:   %d\r\n", CLPRT);
+        OLED_Display.println("");
+        OLED_Display.printf("Alarm Level On:  %d\r\n\n", AlarmOnLevel);
+        OLED_Display.printf("Alarm Level Off: %d\r\n\n", AlarmOffLevel);
+        OLED_Display.printf("Pump Level On:   %d\r\n\n", PumpOnLevel);
+        OLED_Display.printf("Pump Level Off:  %d\r\n\n", PumpOffLevel);
+        OLED_Display.printf("CL Time:         %d\r\n\n", CLPRT);
 
         OLED_Display.display();
 
@@ -1724,7 +1733,7 @@ void rotary_loop()
 }
 
 // read  select switch  SSW
-// only runs when SSW changes position
+// only runs once when SSW changes position
 void pressed(Button2 &btn)
 {
 
@@ -1752,12 +1761,14 @@ void pressed(Button2 &btn)
       /* theses are set in prgam loop
              PumpManFlag
              AlarmManFlag
+             CLPumpManFlag
         */
 
       AutoManControl = ON;
 
       if (SSWMode != 1) // comming from another switch position
       {
+
         digitalWrite(PumpPin, OFF);
         digitalWrite(AlarmPin, OFF);
         digitalWrite(CLPumpPin, OFF);
@@ -1781,6 +1792,7 @@ void pressed(Button2 &btn)
       AutoPositionFlag = OFF;
 
       PumpManFlag = OFF;
+      CLPumpManFlag = OFF;
       AlarmManFlag = OFF; // set in menu
 
       AutoManControl = OFF;
@@ -1811,6 +1823,7 @@ void pressed(Button2 &btn)
       AutoPositionFlag = OFF;
 
       PumpManFlag = OFF;
+      CLPumpManFlag = OFF;
       AlarmManFlag = OFF;
 
       AutoManControl = OFF;
@@ -1818,6 +1831,7 @@ void pressed(Button2 &btn)
       digitalWrite(AlarmPin, OFF);
       digitalWrite(CLPumpPin, OFF);
     }
+
     else if (btn == SSWPump)
     {
       Serial.println("SSWPump");
@@ -1828,7 +1842,8 @@ void pressed(Button2 &btn)
       OffPositionFlag = OFF;
       AutoPositionFlag = OFF;
 
-      PumpManFlag = OFF; // will be controlled by menu
+      PumpManFlag = OFF;   // will be controlled by menu
+      CLPumpManFlag = OFF; // will be controlled by menu
       AlarmManFlag = OFF;
 
       AutoManControl = OFF;
@@ -1842,14 +1857,18 @@ void pressed(Button2 &btn)
       OLED_Display.clearDisplay();
       OLED_Display.setCursor(0, 0);
       OLED_Display.display();
-      rotaryEncoder->setBoundaries(0, 3, false); // dosen't work good in true
+
+      // set rotary 0-4 menu items, also must match in all the Adjust functions
+      rotaryEncoder->setBoundaries(0, 4, false); // dosen't work good in true
     }
+    
     else
     {
       // Serial.println("no button");
       // //SSWMode = 0;
     }
   }
+  
   else // BT mode pretend SSW always in Auto Position
   {
 
@@ -1927,25 +1946,25 @@ void Pump(void)
     }
   }
   else // manual control
-  {    ///////////////////////////////////////////////////// maybe changes this to PumpOnOff
+  {    ///////////////////////////////////////////////////// maybe changes this to PumpToggle
 
-    /*     if (BTStatusFlag)
-        {
+      
+        
           if (PumpManFlag == ON)
           {
             digitalWrite(PumpPin, ON);
             PumpStatus = ON;
-            // DEBUGPRINT("ManPumpStatusON ");
+            Serial.println("ManPumpStatusON ");
             //  DEBUGPRINTLN(PumpStatus);
           }
           else
           {
             digitalWrite(PumpPin, OFF);
             PumpStatus = OFF;
-            // DEBUGPRINT("ManPumpStatusOFF ");
+            Serial.println("ManPumpStatusOFF ");
             //  DEBUGPRINTLN(PumpStatus);
           }
-        } */
+         
   }
 }
 
