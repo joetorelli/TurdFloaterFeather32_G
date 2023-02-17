@@ -51,41 +51,24 @@
 }
  */
 
+// returns Status of sensor ans fill struc with values
 int ReadLevelSensor(SDL_Arduino_INA3221 *LevSensor, LevelSensor *SensorLevelVal, int ChanNum)
 {
 
     int SensorFailType = 0;
-    static int SensorFailCount = 0;
+    // static int SensorFailCount = 0;
     float current_ma[3];
     float voltage[3];
     float shunt[3];
     float LoadV[3];
-    // const int Chan1 = 1;
-    // const int Chan2 = 2;
-    // const int Chan3 = 3;
-    // scal vals convert ma to mm
+
+    // 1st element = scal vals for 12v
+    // 2nd element = scal vals convert ma to mm chan
+    // 3rd element = scal vals for 5v
     double in_min[3] = {4.1, 4.98, 4.0};
     double in_max[3] = {9.36, 20.00, 19.92};
     double out_min[3] = {40.0, 240.0, 4.0};
     double out_max[3] = {110.23, 3000, 300};
-
-    /*
-        // read first chan
-        current_ma[INA3221_CH1] = LevSensor->getCurrent_mA(Chan1) * 1000;
-        voltage[INA3221_CH1] = LevSensor->getBusVoltage_V(Chan1);
-        shunt[INA3221_CH1] = LevSensor->getShuntVoltage_mV(Chan1); /// 1000000
-        LoadV[INA3221_CH1] = voltage[INA3221_CH1] + (shunt[INA3221_CH1]);
-        // read 2nd chan
-        current_ma[INA3221_CH2] = LevSensor->getCurrent_mA(Chan2) * 1000;
-        voltage[INA3221_CH2] = LevSensor->getBusVoltage_V(Chan2);
-        shunt[INA3221_CH2] = LevSensor->getShuntVoltage_mV(Chan2); /// 1000000
-        LoadV[INA3221_CH2] = voltage[INA3221_CH2] + (shunt[INA3221_CH2]);
-        // read 3rd chan
-        current_ma[INA3221_CH3] = LevSensor->getCurrent_mA(Chan3) * 1000;
-        voltage[INA3221_CH3] = LevSensor->getBusVoltage_V(Chan3);
-        shunt[INA3221_CH3] = LevSensor->getShuntVoltage_mV(Chan3); /// 1000000
-        LoadV[INA3221_CH3] = voltage[INA3221_CH3] + (shunt[INA3221_CH3]);
-      */
 
     current_ma[ChanNum] = LevSensor->getCurrent_mA(ChanNum + 1) * 1000;
     voltage[ChanNum] = LevSensor->getBusVoltage_V(ChanNum + 1);
@@ -103,9 +86,6 @@ int ReadLevelSensor(SDL_Arduino_INA3221 *LevSensor, LevelSensor *SensorLevelVal,
     float DepthIn
     int DepthMM
     */
-
-    SensorLevelVal->DepthMM = mapf(current_ma[ChanNum], in_min[ChanNum], in_max[ChanNum], out_min[ChanNum], out_max[ChanNum]);
-    SensorLevelVal->DepthIn = SensorLevelVal->DepthMM / 25.4;
 
     SensorLevelVal->ShuntImA = current_ma[ChanNum];
     SensorLevelVal->BusV = voltage[ChanNum];
@@ -137,147 +117,147 @@ int ReadLevelSensor(SDL_Arduino_INA3221 *LevSensor, LevelSensor *SensorLevelVal,
     // test for 12v bad reading
     if (ChanNum == 0)
     {
-        if (SensorLevelVal->ShuntImA < 3.5)
+        if (SensorLevelVal->ShuntImA < 3.5) //////////// set for low 12v
         {
 
-            SensorFailCount++;
+            // SensorFailCount++;
             SensorFailType = 1;
         }
-        else if (SensorLevelVal->ShuntImA > 21.0)
+        else if (SensorLevelVal->ShuntImA > 21.0) //////////// set for hi 12v over 350ma
         {
-            SensorFailCount++;
+            // SensorFailCount++;
             SensorFailType = 2;
         }
-        else
+        else //////////// good 12v
         {
-            SensorFailCount = 0;
+            // SensorFailCount = 0;
             SensorFailType = 0;
         }
 
-        //  SensorFailCount = 0; ////////////////////////////////////
-        if (SensorFailCount > 5)
-        {
+        /*         //  SensorFailCount = 0;                            ///////////////////////////////////
+                if (SensorFailType != 0)
+                {
 
-            Serial.print("Sensor Fail:");
-            SensorFailCount = 0;
 
-            switch (SensorFailType)
-            {
-            case 0:
-                Serial.println("Sensor OK");
-                return SensorFailType;
-            case 1:
-                Serial.println("Sensor Not Found");
-                return SensorFailType;
-                break;
-            case 2:
-                Serial.println("Sensor Failed");
-                return SensorFailType;
-                break;
-            default:
-                Serial.println("Something went wrong");
-                return SensorFailType;
-                break;
-            }
-        }
+                    if (SensorFailCount > 5)
+                    {
+
+                        // Serial.print("Sensor Fail:");
+                        SensorFailCount = 0;
+
+                    }
+                } */
     }
 
-    // test for sensor bad reading
+    // test for Sensor bad reading
     if (ChanNum == 1)
     {
-        if (SensorLevelVal->ShuntImA < 3.5)
+        if (SensorLevelVal->ShuntImA < 3.5) // test for no sensor
         {
-
-            SensorFailCount++;
+            // SensorFailCount++;
             SensorFailType = 1;
+
+            // pass bad val
+            SensorLevelVal->DepthMM = -1;
+            SensorLevelVal->DepthIn = -1;
         }
-        else if (SensorLevelVal->ShuntImA > 21.0)
+        else if (SensorLevelVal->ShuntImA > 21.0) // test for bad sensor
         {
-            SensorFailCount++;
+            // SensorFailCount++;
             SensorFailType = 2;
+
+            // pass bad val
+            SensorLevelVal->DepthMM = -1;
+            SensorLevelVal->DepthIn = -1;
         }
-        else
+        else // good sensor
         {
-            SensorFailCount = 0;
+            // SensorFailCount = 0;
             SensorFailType = 0;
+
+            // pass val
+            SensorLevelVal->DepthMM = mapf(current_ma[ChanNum], in_min[ChanNum], in_max[ChanNum], out_min[ChanNum], out_max[ChanNum]);
+            SensorLevelVal->DepthIn = SensorLevelVal->DepthMM / 25.4;
         }
 
-        //  SensorFailCount = 0; ////////////////////////////////////
-        if (SensorFailCount > 5)
-        {
+        /*         //  SensorFailCount = 0; ////////////////////////////////////
+                if (SensorFailCount > 5)
+                {
 
-            Serial.print("Sensor Fail:");
-            SensorFailCount = 0;
+                    // Serial.print("Sensor Fail:");
+                    SensorFailCount = 0;
 
-            switch (SensorFailType)
-            {
-            case 0:
-                Serial.println("Sensor OK");
-                return SensorFailType;
-            case 1:
-                Serial.println("Sensor Not Found");
-                return SensorFailType;
-                break;
-            case 2:
-                Serial.println("Sensor Failed");
-                return SensorFailType;
-                break;
-            default:
-                Serial.println("Something went wrong");
-                return SensorFailType;
-                break;
-            }
-        }
+                                 switch (SensorFailType)
+                                {
+                                case 0:
+                                    Serial.println("Sensor OK");
+                                    return SensorFailType;
+                                case 1:
+                                    Serial.println("Sensor Not Found");
+                                    return SensorFailType;
+                                    break;
+                                case 2:
+                                    Serial.println("Sensor Failed");
+                                    return SensorFailType;
+                                    break;
+                                default:
+                                    Serial.println("Something went wrong");
+                                    return SensorFailType;
+                                    break;
+                                }
+                } */
     }
 
     // test for ps 5v bad reading
     if (ChanNum == 2)
     {
-        if (SensorLevelVal->ShuntImA < 3.5)
+        if (SensorLevelVal->ShuntImA < 3.5) //////////// set for low 5v
         {
 
-            SensorFailCount++;
+            // SensorFailCount++;
             SensorFailType = 1;
         }
-        else if (SensorLevelVal->ShuntImA > 21.0)
+        else if (SensorLevelVal->ShuntImA > 21.0) //////////// set for hi 5v
         {
-            SensorFailCount++;
+            // SensorFailCount++;
             SensorFailType = 2;
         }
-        else
+        else //////////// good 5v
         {
-            SensorFailCount = 0;
+            // SensorFailCount = 0;
             SensorFailType = 0;
         }
 
         //  SensorFailCount = 0; ////////////////////////////////////
-        if (SensorFailCount > 5)
-        {
+        /*         if (SensorFailCount > 5)
+                {
 
-            Serial.print("Sensor Fail:");
-            SensorFailCount = 0;
+                    // Serial.print("Sensor Fail:");
+                    SensorFailCount = 0;
 
-            switch (SensorFailType)
-            {
-            case 0:
-                Serial.println("Sensor OK");
-                return SensorFailType;
-            case 1:
-                Serial.println("Sensor Not Found");
-                return SensorFailType;
-                break;
-            case 2:
-                Serial.println("Sensor Failed");
-                return SensorFailType;
-                break;
-            default:
-                Serial.println("Something went wrong");
-                return SensorFailType;
-                break;
-            }
-        }
+                                switch (SensorFailType)
+                                {
+                                case 0:
+                                    Serial.println("Sensor OK");
+                                    return SensorFailType;
+                                case 1:
+                                    Serial.println("Sensor Not Found");
+                                    return SensorFailType;
+                                    break;
+                                case 2:
+                                    Serial.println("Sensor Failed");
+                                    return SensorFailType;
+                                    break;
+                                default:
+                                    Serial.println("Something went wrong");
+                                    return SensorFailType;
+                                    break;
+                                }
+                } */
     }
+    return SensorFailType;
 }
+
 double mapf(double var, double InMin, double InMax, double OutMin, double OutMax)
 {
     return (var - InMin) * (OutMax - OutMin) / (InMax - InMin) + OutMin;

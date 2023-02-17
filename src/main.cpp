@@ -140,7 +140,7 @@
               Relays: Pump, CL Pump
               Leds: Alarm, Pump, CL Pump, BTStatus
               switches: BT Connect(reset?), rotate knob auto/man,alarm,pump
-
+12v out = 100ma on start, 250ma with relay on
 ******************************************************************/
 
 /**********************************************
@@ -278,7 +278,7 @@ Ticker DisPlayTimer;    // how often to update OLED
 Ticker DisplayOffTimer; // when to blank display
 Ticker CLPumpTimer;     // how long to run CLPump
 
-//// time intervals
+//// timer intervals
 float SD_interval = 60;             // sec for updating file on sd card
 unsigned int APP_interval = 500;    // ms for updating BT panel
 unsigned int Sensor_interval = 250; // ms for sensor reading
@@ -1496,13 +1496,24 @@ void testFunct()
 }
 void TestPwrSupply(int PSType)
 {
+  // pstype is chan 1 or chan 3 on ina3221 board
+  String Type = "";
+
+  if (PSType == 1)
+  {
+    Type = "12v";
+  }
+  else
+  {
+    Type = "5v";
+  }
 
   // set up display
   OLED_Display.clearDisplay();
   OLED_Display.setCursor(0, 0);
   OLED_Display.setTextSize(2);
 
-  OLED_Display.println("-Snsr Tst-");
+  OLED_Display.println("-Pwr Tst-");
   OLED_Display.setCursor(0, 20);
   // OLED_Display.printf(" %d", ENCValue);
   // OLED_Display.setCursor(80, 20);
@@ -1515,7 +1526,7 @@ void TestPwrSupply(int PSType)
 
   for (int i = 0; i <= 6; i++)
   {
-    StatusPS = ReadLevelSensor(&ina3221, &Sensor_Level_Values, Chan1);
+    StatusPS = ReadLevelSensor(&ina3221, &Sensor_Level_Values, PSType);
     delay(100);
   }
 
@@ -1525,7 +1536,7 @@ void TestPwrSupply(int PSType)
   case 0:
     OLED_Display.println("");
     OLED_Display.setTextSize(2);
-    OLED_Display.println("Passed");
+    OLED_Display.printf("Passed %s\n", Type.c_str());
     OLED_Display.setTextSize(1);
     OLED_Display.display();
     delay(1000);
@@ -1533,28 +1544,22 @@ void TestPwrSupply(int PSType)
 
   case 1:
     OLED_Display.setTextSize(2);
-    OLED_Display.println("Sensor Not Found");
+    OLED_Display.printf("%s Not Found \n", Type.c_str());
     OLED_Display.setTextSize(1);
     OLED_Display.println("");
-    OLED_Display.println("Check Sensor I/F");
-    OLED_Display.println(" Connections");
+    OLED_Display.println("Check Wiring");
     OLED_Display.println("");
-    OLED_Display.println("Check Sensor Wiring");
-    OLED_Display.println("");
-    OLED_Display.println("Replace Sensor");
+    OLED_Display.printf("Replace %s \n", Type.c_str());
     OLED_Display.display();
     delay(10000);
     break;
 
   case 2:
     OLED_Display.setTextSize(2);
-    OLED_Display.println("Sensor");
-    OLED_Display.println("Failed");
+    OLED_Display.printf("%s Failed \n", Type.c_str());
     OLED_Display.setTextSize(1);
     OLED_Display.println("");
-    OLED_Display.println("Sensor Bad");
-    OLED_Display.println("");
-    OLED_Display.println("Replace Sensor");
+    OLED_Display.printf("Replace %s \n", Type.c_str());
     OLED_Display.display();
     delay(10000);
     break;
