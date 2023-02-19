@@ -353,6 +353,7 @@ boolean SendAppDataFlag = OFF; // update flag
 // Adafruit_SSD1306 OLED_Display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 // 1000000=i2c clk during ssd,  1000000=i2c clk after ssd
 Adafruit_SSD1327 OLED_Display(128, 128, &Wire, OLED_RESET, 1000000, 1000000);
+
 /*******************  rtc  *************************/
 RTC_PCF8523 rtc; // on feather logger board
 
@@ -369,7 +370,7 @@ static const uint8_t _INA_addr = 64; //  0x40 I2C address of sdl board
 // tweeked the resistor value while measuring the current (@11.5ma center of 4-20ma) with a meter. To make the numbers very close.
 // with sig gen
 // ina3221(address, chan1 shunt miliohm, chan2 shunt miliohm, chan3 shunt miliohm)
-SDL_Arduino_INA3221 ina3221(_INA_addr, 6205, 7530, 8220); // 6170, 7590, 8200);
+SDL_Arduino_INA3221 ina3221(_INA_addr, 100, 7530, 100); // 6170, 7590, 8200);
 // the 7.5ohm resistor works out he best. Shunt mv=~30-150, max out of register at 163.8mv.
 //  this leaves some head room for when sensor fails and goes max
 //  need to add test condition for <4ma(open) and >20ma (fault)
@@ -804,7 +805,7 @@ void setup()
     Settings.putInt("PumpOffLevel", 1500);
     Settings.putInt("AlarmOnLevel", 2200);
     Settings.putInt("AlarmOffLevel", 2000);
-    Settings.putInt("CLTimer", 25);
+    Settings.putInt("CLTimer", 5);
     Settings.putInt("AlarmVol", 50);
     Settings.putInt("NVSInit", true);
     Settings.end();                     // close the namespace
@@ -932,14 +933,17 @@ void setup()
 
   // Testing menu
   TestMenu.addMenu("Testing", 0);
-  TestMenu.addNode("PowerSupply", ACT_NODE, &testFunct);
+  TestMenu.addNode("PowerSupply", ACT_NODE, &TestPwrSupply);
   TestMenu.addNode("Sensor", ACT_NODE, &TestSensor);
-  TestMenu.addNode("ON/OFF", ACT_NODE, &testFunct);
-  TestMenu.nodeIndex = 0;
+  //TestMenu.addNode("ON/OFF", ACT_NODE, &testFunct);
+
+  OLED_Display.setTextColor(SSD1327_WHITE);
 
   /****************   test menu run **********/
-  OLED_Display.setTextColor(SSD1327_WHITE);
+  TestMenu.nodeIndex = 0;
+
   TestMenu.build(&OLED_Display);
+  TestMenu.choose();
   // OLED_Display.display();
   delay(500);
 
@@ -948,14 +952,15 @@ void setup()
   TestMenu.choose();
   delay(500);
 
-  TestMenu.nodeIndex = 2;
-  TestMenu.build(&OLED_Display);
-  delay(500);
+  // TestMenu.nodeIndex = 2;
+  // TestMenu.build(&OLED_Display);
+  // delay(500);
 
   OLED_Display.clearDisplay();
   OLED_Display.setCursor(0, 0);
   OLED_Display.display();
 
+  TestMenu.nodeIndex = 0;
   // Force to Auto Position
   PumpPositionFlag = OFF;
   AlarmPositionFlag = OFF;
@@ -1494,87 +1499,102 @@ void AlarmToggle()
 void testFunct()
 {
 }
-void TestPwrSupply(int PSType)
+void TestPwrSupply()
 {
   // pstype is chan 1 or chan 3 on ina3221 board
+
   String Type = "";
 
-  if (PSType == 1)
-  {
-    Type = "12v";
-  }
-  else
-  {
-    Type = "5v";
-  }
-
-  // set up display
-  OLED_Display.clearDisplay();
-  OLED_Display.setCursor(0, 0);
-  OLED_Display.setTextSize(2);
-
-  OLED_Display.println("-Pwr Tst-");
-  OLED_Display.setCursor(0, 20);
-  // OLED_Display.printf(" %d", ENCValue);
-  // OLED_Display.setCursor(80, 20);
-  // OLED_Display.println("MM");
-
-  OLED_Display.setTextSize(1);
-  // OLED_Display.println("");
-  OLED_Display.println("Please wait...");
-  OLED_Display.display();
-
-  for (int i = 0; i <= 6; i++)
-  {
-    StatusPS = ReadLevelSensor(&ina3221, &Sensor_Level_Values, PSType);
-    delay(100);
-  }
-
-  switch (StatusPS)
+  for (int PSType = 1; PSType <= 3; PSType = PSType + 2)
   {
 
-  case 0:
-    OLED_Display.println("");
-    OLED_Display.setTextSize(2);
-    OLED_Display.printf("Passed %s\n", Type.c_str());
-    OLED_Display.setTextSize(1);
-    OLED_Display.display();
-    delay(1000);
-    break;
+    for (int i = 0; i <= 6; i++)
+    {
+      if (PSType == 1)
+      {
+        Type = "12v";
+      }
+      else
+      {
+        Type = "5v";
+      }
 
-  case 1:
+      StatusPS = ReadLevelSensor(&ina3221, &Sensor_Level_Values, PSType);
+      delay(100);
+    }
+    // set up display
+    OLED_Display.clearDisplay();
+    OLED_Display.setCursor(0, 0);
     OLED_Display.setTextSize(2);
-    OLED_Display.printf("%s Not Found \n", Type.c_str());
-    OLED_Display.setTextSize(1);
-    OLED_Display.println("");
-    OLED_Display.println("Check Wiring");
-    OLED_Display.println("");
-    OLED_Display.printf("Replace %s \n", Type.c_str());
-    OLED_Display.display();
-    delay(10000);
-    break;
 
-  case 2:
-    OLED_Display.setTextSize(2);
-    OLED_Display.printf("%s Failed \n", Type.c_str());
-    OLED_Display.setTextSize(1);
-    OLED_Display.println("");
-    OLED_Display.printf("Replace %s \n", Type.c_str());
-    OLED_Display.display();
-    delay(10000);
-    break;
+    OLED_Display.println("-Pwr Tst-");
+    OLED_Display.setCursor(0, 20);
+    // OLED_Display.printf(" %d", ENCValue);
+    // OLED_Display.setCursor(80, 20);
+    // OLED_Display.println("MM");
 
-  default:
-    OLED_Display.setTextSize(2);
-    OLED_Display.println("Something wrong");
     OLED_Display.setTextSize(1);
-    OLED_Display.println("");
-    OLED_Display.println("Push Reset");
-    OLED_Display.println("");
-    OLED_Display.println("Check PS");
+    // OLED_Display.println("");
+    OLED_Display.println("Please wait...");
     OLED_Display.display();
-    delay(10000);
-    break;
+    switch (StatusPS)
+    {
+
+    case 0: // good
+
+      OLED_Display.setTextSize(2);
+      OLED_Display.printf("%s OK %d\n", Type.c_str(), PSType);
+      OLED_Display.setTextSize(1);
+      OLED_Display.println("");
+      OLED_Display.printf("Volts: %d\n\r", Sensor_Level_Values.LoadV);
+      OLED_Display.printf("Current: %f.1\n\r", Sensor_Level_Values.ShuntImA);
+      OLED_Display.display();
+      delay(10000);
+      break;
+
+    case 1: // low
+      OLED_Display.setTextSize(2);
+      OLED_Display.printf("%s LOW %d\n", Type.c_str(), PSType);
+      OLED_Display.setTextSize(1);
+      OLED_Display.println("");
+      OLED_Display.printf("Volts: %d\n\r", Sensor_Level_Values.LoadV);
+      OLED_Display.printf("Current: %f.1\n\r", Sensor_Level_Values.ShuntImA);
+      OLED_Display.println("");
+      OLED_Display.println("Check Wiring");
+      OLED_Display.println("");
+      OLED_Display.printf("Replace %s \n", Type.c_str());
+      OLED_Display.display();
+      delay(10000);
+      break;
+
+    case 2: // high
+      OLED_Display.setTextSize(2);
+      OLED_Display.printf("%s Failed \n", Type.c_str());
+      OLED_Display.setTextSize(1);
+      OLED_Display.println("");
+      OLED_Display.printf("Volts: %d\n\r", Sensor_Level_Values.LoadV);
+      OLED_Display.printf("Current: %f.1\n\r", Sensor_Level_Values.ShuntImA);
+      OLED_Display.println("");
+      OLED_Display.printf("Replace %s \n", Type.c_str());
+      OLED_Display.display();
+      delay(10000);
+      break;
+
+    default:
+      OLED_Display.setTextSize(2);
+      OLED_Display.println("Something wrong");
+      OLED_Display.setTextSize(1);
+      OLED_Display.println("");
+      OLED_Display.println("Push Reset");
+      OLED_Display.println("");
+      OLED_Display.println("Check PS");
+      OLED_Display.display();
+      delay(10000);
+      break;
+    }
+    OLED_Display.clearDisplay();
+    OLED_Display.setCursor(0, 0);
+    OLED_Display.display();
   }
 }
 void TestSensor()

@@ -65,10 +65,10 @@ int ReadLevelSensor(SDL_Arduino_INA3221 *LevSensor, LevelSensor *SensorLevelVal,
     // 1st element = scal vals for 12v
     // 2nd element = scal vals convert ma to mm chan
     // 3rd element = scal vals for 5v
-    double in_min[3] = {4.1, 4.98, 4.0};
-    double in_max[3] = {9.36, 20.00, 19.92};
-    double out_min[3] = {40.0, 240.0, 4.0};
-    double out_max[3] = {110.23, 3000, 300};
+    double in_min[3] = {0, 4.98, 0};
+    double in_max[3] = {1, 20.00, 1};
+    double out_min[3] = {0, 240.0, 0};
+    double out_max[3] = {1, 3000, 1};
 
     current_ma[ChanNum] = LevSensor->getCurrent_mA(ChanNum + 1) * 1000;
     voltage[ChanNum] = LevSensor->getBusVoltage_V(ChanNum + 1);
@@ -117,13 +117,13 @@ int ReadLevelSensor(SDL_Arduino_INA3221 *LevSensor, LevelSensor *SensorLevelVal,
     // test for 12v bad reading
     if (ChanNum == 0)
     {
-        if (SensorLevelVal->ShuntImA < 3.5) //////////// set for low 12v
+        if (SensorLevelVal->ShuntImA < 0) //////////// set for low 12v
         {
 
             // SensorFailCount++;
             SensorFailType = 1;
         }
-        else if (SensorLevelVal->ShuntImA > 21.0) //////////// set for hi 12v over 350ma
+        else if (SensorLevelVal->ShuntImA > 1) //////////// set for hi 12v over 350ma
         {
             // SensorFailCount++;
             SensorFailType = 2;
@@ -211,13 +211,13 @@ int ReadLevelSensor(SDL_Arduino_INA3221 *LevSensor, LevelSensor *SensorLevelVal,
     // test for ps 5v bad reading
     if (ChanNum == 2)
     {
-        if (SensorLevelVal->ShuntImA < 3.5) //////////// set for low 5v
+        if (SensorLevelVal->ShuntImA < 0) //////////// set for low 5v
         {
 
             // SensorFailCount++;
             SensorFailType = 1;
         }
-        else if (SensorLevelVal->ShuntImA > 21.0) //////////// set for hi 5v
+        else if (SensorLevelVal->ShuntImA > 1) //////////// set for hi 5v
         {
             // SensorFailCount++;
             SensorFailType = 2;
