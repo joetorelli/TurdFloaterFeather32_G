@@ -1099,7 +1099,13 @@ void loop()
   if (SensorReadFlag == ON)
   {
     // SensorRead();
-    ReadLevelSensor(&ina3221, &Sensor_Level_Values, Chan2);
+    StatusSensor = ReadLevelSensor(&ina3221, &Sensor_Level_Values, Chan2);
+    // if bad reading run fault display
+    if (StatusSensor !=0 )
+    {
+      TestSensor();
+    }
+    
     SensorReadFlag = OFF;
   }
 
