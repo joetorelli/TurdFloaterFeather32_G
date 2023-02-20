@@ -52,7 +52,7 @@
  */
 
 // returns Status of sensor ans fill struc with values
-int ReadLevelSensor(SDL_Arduino_INA3221 *LevSensor, LevelSensor *SensorLevelVal, int ChanNum)
+int ReadLevelSensor(SDL_Arduino_INA3221 *LevSensor, LevelSensor *SensorLevelVal, int CNum)
 {
 
     int SensorFailType = 0;
@@ -70,10 +70,10 @@ int ReadLevelSensor(SDL_Arduino_INA3221 *LevSensor, LevelSensor *SensorLevelVal,
     double out_min[3] = {0, 240.0, 0};
     double out_max[3] = {1, 3000, 1};
 
-    current_ma[ChanNum] = LevSensor->getCurrent_mA(ChanNum + 1) * 1000;
-    voltage[ChanNum] = LevSensor->getBusVoltage_V(ChanNum + 1);
-    shunt[ChanNum] = LevSensor->getShuntVoltage_mV(ChanNum + 1); /// 1000000
-    LoadV[ChanNum] = voltage[ChanNum] + (shunt[ChanNum]);
+    current_ma[CNum] = LevSensor->getCurrent_mA(CNum + 1) * 1000;
+    voltage[CNum] = LevSensor->getBusVoltage_V(CNum + 1);
+    shunt[CNum] = LevSensor->getShuntVoltage_mV(CNum + 1); /// 1000000
+    LoadV[CNum] = voltage[CNum] + (shunt[CNum]);
 
     /*  // SensorLevelVal struct
     int ShuntVRaw = 0;
@@ -87,10 +87,10 @@ int ReadLevelSensor(SDL_Arduino_INA3221 *LevSensor, LevelSensor *SensorLevelVal,
     int DepthMM
     */
 
-    SensorLevelVal->ShuntImA = current_ma[ChanNum];
-    SensorLevelVal->BusV = voltage[ChanNum];
-    SensorLevelVal->ShuntVmv = shunt[ChanNum];
-    SensorLevelVal->LoadV = LoadV[ChanNum];
+    SensorLevelVal->ShuntImA = current_ma[CNum];
+    SensorLevelVal->BusV = voltage[CNum];
+    SensorLevelVal->ShuntVmv = shunt[CNum];
+    SensorLevelVal->LoadV = LoadV[CNum];
 
     // SensorLevelVal->DepthMM = mapf(current_ma[INA3221_CH2], in_min[INA3221_CH2], in_max[INA3221_CH2], out_min[INA3221_CH2], out_max[INA3221_CH2]);
 
@@ -115,15 +115,27 @@ int ReadLevelSensor(SDL_Arduino_INA3221 *LevSensor, LevelSensor *SensorLevelVal,
         Serial.println(SensorLevelVal->DepthIn); */
 
     // test for 12v bad reading
-    if (ChanNum == 0)
+    if (CNum == 0)
     {
-        if (SensorLevelVal->ShuntImA < 0) //////////// set for low 12v
+        if (SensorLevelVal->BusV < 11) //(SensorLevelVal->ShuntImA < 0) //////////// set for low 12v
         {
 
             // SensorFailCount++;
             SensorFailType = 1;
         }
-        else if (SensorLevelVal->ShuntImA > 1) //////////// set for hi 12v over 350ma
+        else if (SensorLevelVal->BusV > 15) // (SensorLevelVal->ShuntImA > 1) //////////// set for hi 12v over 350ma
+        {
+            // SensorFailCount++;
+            SensorFailType = 2;
+        }
+
+        else if (SensorLevelVal->ShuntImA < 0) //////////// set for low 12v current
+        {
+
+            // SensorFailCount++;
+            SensorFailType = 1;
+        }
+        else if (SensorLevelVal->ShuntImA > 500) //////////// set for hi 12v over 350ma
         {
             // SensorFailCount++;
             SensorFailType = 2;
@@ -133,25 +145,23 @@ int ReadLevelSensor(SDL_Arduino_INA3221 *LevSensor, LevelSensor *SensorLevelVal,
             // SensorFailCount = 0;
             SensorFailType = 0;
         }
-
-        /*         //  SensorFailCount = 0;                            ///////////////////////////////////
-                if (SensorFailType != 0)
-                {
-
-
-                    if (SensorFailCount > 5)
-                    {
-
-                        // Serial.print("Sensor Fail:");
-                        SensorFailCount = 0;
-
-                    }
-                } */
     }
 
-    // test for Sensor bad reading
-    if (ChanNum == 1)
+    ////// test for Sensor bad reading
+    if (CNum == 1)
     {
+        if (SensorLevelVal->BusV < 11) // set for low 12v
+        {
+
+            // SensorFailCount++;
+            
+            SensorFailType = 1;
+        }
+        else if (SensorLevelVal->BusV > 15) //  set for hi 12v
+        {
+            // SensorFailCount++;
+            SensorFailType = 2;
+        }
         if (SensorLevelVal->ShuntImA < 3.5) // test for no sensor
         {
             // SensorFailCount++;
@@ -176,7 +186,7 @@ int ReadLevelSensor(SDL_Arduino_INA3221 *LevSensor, LevelSensor *SensorLevelVal,
             SensorFailType = 0;
 
             // pass val
-            SensorLevelVal->DepthMM = mapf(current_ma[ChanNum], in_min[ChanNum], in_max[ChanNum], out_min[ChanNum], out_max[ChanNum]);
+            SensorLevelVal->DepthMM = mapf(current_ma[CNum], in_min[CNum], in_max[CNum], out_min[CNum], out_max[CNum]);
             SensorLevelVal->DepthIn = SensorLevelVal->DepthMM / 25.4;
         }
 
@@ -209,15 +219,28 @@ int ReadLevelSensor(SDL_Arduino_INA3221 *LevSensor, LevelSensor *SensorLevelVal,
     }
 
     // test for ps 5v bad reading
-    if (ChanNum == 2)
+    if (CNum == 2)
     {
-        if (SensorLevelVal->ShuntImA < 0) //////////// set for low 5v
+
+        if (SensorLevelVal->BusV < 4) //(SensorLevelVal->ShuntImA < 0) //////////// set for low 12v
         {
 
             // SensorFailCount++;
             SensorFailType = 1;
         }
-        else if (SensorLevelVal->ShuntImA > 1) //////////// set for hi 5v
+        else if (SensorLevelVal->BusV > 5.5) // (SensorLevelVal->ShuntImA > 1) //////////// set for hi 12v over 350ma
+        {
+            // SensorFailCount++;
+            SensorFailType = 2;
+        }
+
+        if (SensorLevelVal->ShuntImA < 0) //////////// set for low 5v current
+        {
+
+            // SensorFailCount++;
+            SensorFailType = 1;
+        }
+        else if (SensorLevelVal->ShuntImA > 750) //////////// set for hi 5v current
         {
             // SensorFailCount++;
             SensorFailType = 2;

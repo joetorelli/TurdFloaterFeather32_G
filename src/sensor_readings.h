@@ -9,8 +9,8 @@
 #include <Adafruit_BME280.h>
 #include "INA3221.h"
 #include "settings.h"
-//#include "OLED.h"
-// #include "sensor_readings.h"
+// #include "OLED.h"
+//  #include "sensor_readings.h"
 ////#include <Adafruit_INA219.h>
 // #include <movingAvg.h>
 
@@ -45,7 +45,7 @@ struct LevelSensor
     int DepthMM = 0;
 };
 
-int ReadLevelSensor(SDL_Arduino_INA3221 *LevSensor, LevelSensor *SensorLevelVal, int ChanNum);
+int ReadLevelSensor(SDL_Arduino_INA3221 *LevSensor, LevelSensor *SensorLevelVal, int CNum);
 double mapf(double var, double InMin, double InMax, double OutMin, double OutMax);
 
 #endif
