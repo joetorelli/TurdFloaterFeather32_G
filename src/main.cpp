@@ -73,12 +73,12 @@
               done - show oled when connected to BT
               done - moved to ssd1327 1.5" 128x128 oled display
               done - added CLPump on/off
-
+              done - adding diags to menu start, and monitor during run time
 
               inwork -
                   splitting files
                   menu system setup
-                  adding diags to menu start
+                  looking into web page
 
 
 
@@ -1564,7 +1564,7 @@ void TestPwrSupply()
       OLED_Display.print("Current: ");
       OLED_Display.println(Sensor_Level_Values.ShuntImA, 1);
       OLED_Display.display();
-;
+      ;
       delay(1000);
       break;
 
