@@ -84,7 +84,7 @@
 
               open -
                   add alarm if not in auto after some time
-
+                  ****** add air  flow switch
                   Connect to ESPHome
                   Vol adj to PWM for alarm works on screen
 
