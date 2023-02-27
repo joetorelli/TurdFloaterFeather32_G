@@ -78,6 +78,8 @@
               inwork -
                   splitting files
                   menu system setup
+                  working, need to add mprls pressure sensor to read air pump
+                  add mag sw to check for CL tablet level and not use cl pump
                   looking into web page
 
 
@@ -91,10 +93,10 @@
 
 
               I2C Adr
-                SRF = 0x70 not used
+
                 RTC PCF8523 - read 0xd1; write 0xd0
                 OLED - 0X3C  change to 128x64 display************
-                BME 0x76
+                MPRLS - 0x18
                 ina3221/INA219 0x40
                 * //Explanation of I2C address for INA3221:
                 *   //INA3221_ADDR40_GND = 0b1000000, // A0 pin -> GND
@@ -106,6 +108,8 @@
                 * 7.50 * 20ma = 150mv
                 * 6.19 * 20ma = 124mv
                 *
+                BME 0x76 not used
+                SRF = 0x70 not used
               Define all pins
               I2C             23 I2c_SDA
                               22 I2c_SCL
@@ -368,7 +372,7 @@ static const uint8_t _INA_addr = 64; //  0x40 I2C address of sdl board
 // tweeked the resistor value while measuring the current (@11.5ma center of 4-20ma) with a meter. To make the numbers very close.
 // with sig gen
 // ina3221(address, chan1 shunt miliohm, chan2 shunt miliohm, chan3 shunt miliohm)
-SDL_Arduino_INA3221 ina3221(_INA_addr, 100, 7530, 100); // 6170, 7590, 8200);
+SDL_Arduino_INA3221 ina3221(_INA_addr, 105, 7530, 105); // 6170, 7590, 8200);
 // the 7.5ohm resistor works out he best. Shunt mv=~30-150, max out of register at 163.8mv.
 //  this leaves some head room for when sensor fails and goes max
 //  need to add test condition for <4ma(open) and >20ma (fault)
@@ -378,7 +382,7 @@ const int Chan1 = 0;
 const int Chan2 = 1;
 const int Chan3 = 2;
 
-int StatusSensor = 0;
+int StatusLevelSensor = 0;
 
 /***********************  encoder  *********************/
 // AiEsp32RotaryEncoder rotaryEncoder = AiEsp32RotaryEncoder(ROTARY_ENCODER_A_PIN, ROTARY_ENCODER_B_PIN, ROTARY_ENCODER_BUTTON_PIN, ROTARY_ENCODER_VCC_PIN, ROTARY_ENCODER_STEPS);
@@ -414,6 +418,14 @@ void pressed(Button2 &btn); // when button/sw pressed
 // byte myButtonStateHandler();
 // void myTapHandler(Button2 &btn);
 
+/***********************  air (pressure) sensor  *****************/
+// You dont *need* a reset and EOC pin for most uses, so we set to -1 and don't connect
+// i2c adr 0x18
+#define RESET_PIN -1 // set to any GPIO pin # to hard-reset on begin()
+#define EOC_PIN -1   // set to any GPIO pin to read end-of-conversion by pin
+Adafruit_MPRLS AirFlow = Adafruit_MPRLS(RESET_PIN, EOC_PIN);
+struct AirSensor AirPump;
+int StatusAirSensor = 0;
 /****************************  menu code  ***************************/
 menuFrame AlarmMenu; // runs when SSW in Alarm Position
 menuFrame PumpMenu;  // runs when SSW in Pump Position
@@ -897,6 +909,19 @@ void setup()
     BuildPanel();
   }
 
+  /********************* init pressure sensor ***************/
+  Serial.println("MPRLS Simple Test");
+  if (!AirFlow.begin())
+  {
+    Serial.println("Failed to communicate with MPRLS sensor, check wiring?");
+
+    delay(1000);
+  }
+  else
+  {
+    Serial.println("Found MPRLS sensor");
+    delay(1000);
+  }
   /***********************************************************/
   // Start the timers
   SDTimer.attach(SD_interval, SD_UpdateSetFlag);               // set flag to write to sd
@@ -1097,9 +1122,9 @@ void loop()
   if (SensorReadFlag == ON)
   {
     // SensorRead();
-    StatusSensor = ReadLevelSensor(&ina3221, &Sensor_Level_Values, Chan2);
+    StatusLevelSensor = ReadLevelSensor(&ina3221, &Sensor_Level_Values, Chan2);
     // if bad reading run fault display
-    if (StatusSensor != 0)
+    if (StatusLevelSensor != 0)
     {
       TestPwrSupply();
       TestSensor();
@@ -1125,6 +1150,9 @@ void loop()
   Pump();
   CLPump();
   Alarm();
+
+  StatusAirSensor = ReadAirPump(&AirFlow, &AirPump);
+  Serial.printf("Status Air Sensor: %d", StatusAirSensor);
 }
 
 /**************************************************************************************************
@@ -1649,11 +1677,11 @@ void TestSensor()
 
   for (int i = 0; i <= 6; i++)
   {
-    StatusSensor = ReadLevelSensor(&ina3221, &Sensor_Level_Values, Chan2);
+    StatusLevelSensor = ReadLevelSensor(&ina3221, &Sensor_Level_Values, Chan2);
     delay(100);
   }
 
-  switch (StatusSensor)
+  switch (StatusLevelSensor)
   {
 
   case 0:

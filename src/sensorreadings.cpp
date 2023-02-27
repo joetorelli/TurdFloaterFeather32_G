@@ -51,6 +51,37 @@
 }
  */
 
+// pressure sensor
+int ReadAirPump(Adafruit_MPRLS *AirSen, AirSensor *AirSenVal)
+{
+    int SensorFailType = 0;
+    AirSenVal->pressure_hPa = AirSen->readPressure();
+    AirSenVal->pressure_PSI = AirSenVal->pressure_hPa / 68.947572932;
+    Serial.print("Pressure (hPa): ");
+    Serial.println(AirSenVal->pressure_hPa);
+    Serial.print("Pressure (PSI): ");
+    Serial.println(AirSenVal->pressure_PSI);
+
+    // test
+    if (AirSenVal->pressure_hPa < 950) //(SensorLevelVal->ShuntImA < 0) //////////// set for low 12v
+    {
+
+        // SensorFailCount++;
+        SensorFailType = 1;
+    }
+    else if (AirSenVal->pressure_hPa > 1055) // (SensorLevelVal->ShuntImA > 1) //////////// set for hi 12v over 350ma
+    {
+        // SensorFailCount++;
+        SensorFailType = 2;
+    }
+    else
+    {
+        SensorFailType = 0;
+    }
+    Serial.printf("Status Air Sensor: %d", SensorFailType);
+    return SensorFailType;
+}
+
 // returns Status of sensor ans fill struc with values
 int ReadLevelSensor(SDL_Arduino_INA3221 *LevSensor, LevelSensor *SensorLevelVal, int CNum)
 {
@@ -129,7 +160,7 @@ int ReadLevelSensor(SDL_Arduino_INA3221 *LevSensor, LevelSensor *SensorLevelVal,
             SensorFailType = 2;
         }
 
-        else if (SensorLevelVal->ShuntImA < 0) //////////// set for low 12v current
+        else if (SensorLevelVal->ShuntImA <= 0) //////////// set for low 12v current
         {
 
             // SensorFailCount++;
@@ -154,7 +185,7 @@ int ReadLevelSensor(SDL_Arduino_INA3221 *LevSensor, LevelSensor *SensorLevelVal,
         {
 
             // SensorFailCount++;
-            
+
             SensorFailType = 1;
         }
         else if (SensorLevelVal->BusV > 15) //  set for hi 12v

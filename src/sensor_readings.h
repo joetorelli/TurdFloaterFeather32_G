@@ -6,8 +6,9 @@
 #include <Adafruit_SSD1327.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_Sensor.h>
-#include <Adafruit_BME280.h>
+// #include <Adafruit_BME280.h>
 #include "INA3221.h"
+#include "Adafruit_MPRLS.h" // air sensor
 #include "settings.h"
 // #include "OLED.h"
 //  #include "sensor_readings.h"
@@ -44,8 +45,14 @@ struct LevelSensor
     float DepthIn = 0;
     int DepthMM = 0;
 };
+struct AirSensor
+{
+    float pressure_hPa = 0;
+    float pressure_PSI = 0;
+};
 
 int ReadLevelSensor(SDL_Arduino_INA3221 *LevSensor, LevelSensor *SensorLevelVal, int CNum);
+int ReadAirPump(Adafruit_MPRLS *AirSen, AirSensor *AirSenVal);
 double mapf(double var, double InMin, double InMax, double OutMin, double OutMax);
 
 #endif
