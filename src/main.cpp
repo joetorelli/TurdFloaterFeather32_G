@@ -95,9 +95,21 @@
               I2C Adr
 
                 RTC PCF8523 - read 0xd1; write 0xd0
-                OLED - 0X3C  change to 128x64 display************
                 MPRLS - 0x18
-                ina3221/INA219 0x40
+
+                OLED - 0X3C  change to 128x64 display************
+                 solder bs from 0 to 1 for i2c
+                * The connections when using I2C:
+                    VCC->VCC
+                    GND->GND
+                    DIN ->SDA
+                    CLK ->SCL
+                    CS: Don't connect to anything
+                    DC: Sets the I2C address. Connect to VCC to set address to 0x3D, and connect it to GND to set it to 0x3C.
+                    RST: I didn't connect it to anything, and in software, assigned it to -1 in the constructor:
+                    display = new Adafruit_SSD1327(128, 128, &Wire, -1, 1000000);
+
+                ina3221/INA219 0x40,41
                 * //Explanation of I2C address for INA3221:
                 *   //INA3221_ADDR40_GND = 0b1000000, // A0 pin -> GND
                 *   //INA3221_ADDR41_VCC = 0b1000001, // A0 pin -> VCC
@@ -107,9 +119,10 @@
                 * 8.20 * 20ma = 164mv
                 * 7.50 * 20ma = 150mv
                 * 6.19 * 20ma = 124mv
-                *
+
                 BME 0x76 not used
                 SRF = 0x70 not used
+
               Define all pins
               I2C             23 I2c_SDA
                               22 I2c_SCL
@@ -354,7 +367,7 @@ boolean SendAppDataFlag = OFF; // update flag
 // Declaration for an SSD1306 OLED_Display connected to I2C (SDA, SCL pins)
 // Adafruit_SSD1306 OLED_Display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 // 1000000=i2c clk during ssd,  1000000=i2c clk after ssd
-Adafruit_SSD1327 OLED_Display(128, 128, &Wire, OLED_RESET, 1000000, 1000000);
+Adafruit_SSD1327 OLED_Display(128, 128, &Wire, OLED_RESET, 1000000, 400000);
 
 /*******************  rtc  *************************/
 RTC_PCF8523 rtc; // on feather logger board
@@ -423,7 +436,7 @@ void pressed(Button2 &btn); // when button/sw pressed
 // i2c adr 0x18
 #define RESET_PIN -1 // set to any GPIO pin # to hard-reset on begin()
 #define EOC_PIN -1   // set to any GPIO pin to read end-of-conversion by pin
-Adafruit_MPRLS AirFlow = Adafruit_MPRLS(RESET_PIN, EOC_PIN);
+Adafruit_MPRLS AirFlowSensor = Adafruit_MPRLS(RESET_PIN, EOC_PIN);
 struct AirSensor AirPump;
 int StatusAirSensor = 0;
 /****************************  menu code  ***************************/
@@ -433,7 +446,8 @@ menuFrame TestMenu;  // runs when Program Starts
 
 // menu call functions
 void testFunct();
-void TestSensor();
+void TestLevelSensor();
+void TestAirSensor();
 void TestPwrSupply();
 void PumpOnAdjust();
 void PumpOffAdjust();
@@ -911,7 +925,7 @@ void setup()
 
   /********************* init pressure sensor ***************/
   Serial.println("MPRLS Simple Test");
-  if (!AirFlow.begin())
+  if (!AirFlowSensor.begin())
   {
     Serial.println("Failed to communicate with MPRLS sensor, check wiring?");
 
@@ -957,14 +971,13 @@ void setup()
   // Testing menu
   TestMenu.addMenu("Testing", 0);
   TestMenu.addNode("PowerSupply", ACT_NODE, &TestPwrSupply);
-  TestMenu.addNode("Sensor", ACT_NODE, &TestSensor);
-  // TestMenu.addNode("ON/OFF", ACT_NODE, &testFunct);
+  TestMenu.addNode("LvlSensor", ACT_NODE, &TestLevelSensor);
+  TestMenu.addNode("AirSensor", ACT_NODE, &TestAirSensor);
 
   OLED_Display.setTextColor(SSD1327_WHITE);
 
   /****************   test menu run **********/
   TestMenu.nodeIndex = 0;
-
   TestMenu.build(&OLED_Display);
   delay(1000);
   TestMenu.choose(); // TestPwrSupply
@@ -973,17 +986,18 @@ void setup()
   TestMenu.nodeIndex = 1;
   TestMenu.build(&OLED_Display);
   delay(1000);
-  TestMenu.choose(); // TestSensor
+  TestMenu.choose(); // Test level Sensor
 
-  // TestMenu.nodeIndex = 2;
-  // TestMenu.build(&OLED_Display);
-  // delay(500);
+  TestMenu.nodeIndex = 2;
+  TestMenu.build(&OLED_Display); // test air sensor
+  delay(1000);
 
   OLED_Display.clearDisplay();
   OLED_Display.setCursor(0, 0);
   OLED_Display.display();
 
   TestMenu.nodeIndex = 0;
+
   // Force to Auto Position
   PumpPositionFlag = OFF;
   AlarmPositionFlag = OFF;
@@ -1110,6 +1124,7 @@ void loop()
     DisplayUpdate();
     DisplayUpdateFlag = OFF;
   }
+
   // Update SD Card *********/
   // called from timer->SDUpdateSetFlag->SDUpdateFlag=ON
   if (SDUpdateFlag == ON)
@@ -1117,18 +1132,30 @@ void loop()
     SD_Update();
     SDUpdateFlag = OFF;
   }
+
   // Update Sensor *********/
   // called from timer->SensorReadSetFlag->SensorReadFlag=ON
   if (SensorReadFlag == ON)
   {
-    // SensorRead();
+    // Sensor Level Read();
     StatusLevelSensor = ReadLevelSensor(&ina3221, &Sensor_Level_Values, Chan2);
     // if bad reading run fault display
     if (StatusLevelSensor != 0)
     {
       TestPwrSupply();
-      TestSensor();
+      TestLevelSensor();
     }
+
+    // sensor air read
+    StatusAirSensor = ReadAirPump(&AirFlowSensor, &AirPump);
+    Serial.printf("Status Air Sensor: %d", StatusAirSensor);
+    // if bad reading run fault display
+    if (StatusAirSensor != 0)
+    {
+      TestPwrSupply();
+      TestAirSensor();
+    }
+
     SensorReadFlag = OFF;
   }
 
@@ -1150,9 +1177,6 @@ void loop()
   Pump();
   CLPump();
   Alarm();
-
-  StatusAirSensor = ReadAirPump(&AirFlow, &AirPump);
-  Serial.printf("Status Air Sensor: %d", StatusAirSensor);
 }
 
 /**************************************************************************************************
@@ -1532,6 +1556,7 @@ void testFunct()
 {
 }
 
+// read ina chans for power supply
 void TestPwrSupply()
 {
   // int PSType = 0;
@@ -1583,7 +1608,7 @@ void TestPwrSupply()
       TestMenu.nodeIndex = 0;
       TestMenu.build(&OLED_Display);
 
-      // 12v/5v staus display
+      // 12v/5v staus display print below menu
       OLED_Display.setTextSize(2);
       OLED_Display.printf("%s OK \n\r", Type.c_str());
       OLED_Display.setTextSize(1);
@@ -1592,7 +1617,6 @@ void TestPwrSupply()
       OLED_Display.print("Current: ");
       OLED_Display.println(Sensor_Level_Values.ShuntImA, 1);
       OLED_Display.display();
-      ;
       delay(1000);
       break;
 
@@ -1656,7 +1680,7 @@ void TestPwrSupply()
   }
 }
 
-void TestSensor()
+void TestLevelSensor()
 {
 
   // set up display
@@ -1733,6 +1757,126 @@ void TestSensor()
     OLED_Display.println("");
     OLED_Display.print("Replace Sensor");
 
+    OLED_Display.display();
+    AlarmToggle();
+    delay(5000);
+    AlarmToggle();
+    delay(1000);
+    break;
+
+  default:
+    OLED_Display.setTextSize(2);
+    OLED_Display.println("Something wrong");
+    OLED_Display.setTextSize(1);
+    OLED_Display.println("");
+    OLED_Display.println("Push Reset");
+    OLED_Display.println("");
+    OLED_Display.println("Check PS");
+    OLED_Display.display();
+    delay(10000);
+    break;
+  }
+
+  // OLED_Display.print(("   Press to enter"));
+  // OLED_Display.display();
+}
+
+void TestAirSensor()
+{
+
+  // set up display
+  // OLED_Display.clearDisplay();
+  // OLED_Display.setCursor(0, 0);
+  // OLED_Display.setTextSize(2);
+
+  // OLED_Display.println("-Snsr Tst-");
+  // OLED_Display.setCursor(0, 20);
+  // // OLED_Display.printf(" %d", ENCValue);
+  // // OLED_Display.setCursor(80, 20);
+  // // OLED_Display.println("MM");
+
+  // OLED_Display.setTextSize(1);
+  // // OLED_Display.println("");
+  // OLED_Display.println("Please wait...");
+  // OLED_Display.display();
+
+  for (int i = 0; i <= 6; i++)
+  {
+    // sensor air read
+    StatusAirSensor = ReadAirPump(&AirFlowSensor, &AirPump);
+    delay(100);
+  }
+
+  switch (StatusAirSensor)
+  {
+
+  case 0:
+
+    // OLED_Display.printf("Volts: %d\n\r", Sensor_Level_Values.LoadV);
+    // OLED_Display.printf("Current: %f.1\n\r", Sensor_Level_Values.ShuntImA);
+
+    //OLED_Display.println("");
+    OLED_Display.setTextSize(2);
+    OLED_Display.println("Passed");
+    OLED_Display.setTextSize(1);
+    OLED_Display.print("HPA: ");
+    OLED_Display.println(AirPump.pressure_hPa, 1);
+    OLED_Display.print("PSI: ");
+    OLED_Display.println(AirPump.pressure_PSI, 1);
+    OLED_Display.display();
+    delay(1000);
+    break;
+
+  case 1:
+
+    OLED_Display.setTextSize(2);
+    OLED_Display.println("Sensor Not Found");
+    OLED_Display.setTextSize(1);
+    OLED_Display.println("");
+    OLED_Display.println("Check Sensor I/F");
+    OLED_Display.println(" Connections");
+    OLED_Display.println("");
+    OLED_Display.println("Check Sensor Wiring");
+    OLED_Display.println("");
+    OLED_Display.println("Replace Sensor");
+    OLED_Display.display();
+    AlarmToggle();
+    delay(5000);
+    AlarmToggle();
+    delay(1000);
+    break;
+
+  case 2:
+    //OLED_Display.println("");
+    OLED_Display.setTextSize(2);
+
+    OLED_Display.println("LOW");
+    OLED_Display.setTextSize(1);
+    OLED_Display.println("");
+    OLED_Display.println("Check Air Filter");
+    OLED_Display.print("HPA: ");
+    OLED_Display.println(AirPump.pressure_hPa, 1);
+    OLED_Display.print("PSI: ");
+    OLED_Display.println(AirPump.pressure_PSI, 1);
+    OLED_Display.display();
+    AlarmToggle();
+    delay(5000);
+    AlarmToggle();
+    delay(1000);
+    break;
+
+  case 3:
+    //OLED_Display.println("");
+    OLED_Display.setTextSize(2);
+
+    OLED_Display.println("HI");
+    OLED_Display.setTextSize(1);
+    OLED_Display.println("");
+    OLED_Display.println("Check Air Filter");
+    OLED_Display.print("HPA: ");
+    OLED_Display.println(AirPump.pressure_hPa, 1);
+    OLED_Display.print("PSI: ");
+    OLED_Display.println(AirPump.pressure_PSI, 1);
     OLED_Display.display();
     AlarmToggle();
     delay(5000);
