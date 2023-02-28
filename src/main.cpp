@@ -52,6 +52,8 @@
                   BT =  has OLED Display and SSW inop
 
 
+
+
             Need to fix
               done - Pump LED flashes from man to auto
               done - add moving average -
@@ -74,13 +76,17 @@
               done - moved to ssd1327 1.5" 128x128 oled display
               done - added CLPump on/off
               done - adding diags to menu start, and monitor during run time
+              air sensor working, need to add mprls pressure sensor to read air pump
 
               inwork -
+                  air sensor working
+                  may need to add io expander
                   splitting files
                   menu system setup
-                  working, need to add mprls pressure sensor to read air pump
                   add mag sw to check for CL tablet level and not use cl pump
-                  looking into web page
+                  chang CL Pump. use mag switch for tablet level. go thru if board or go down to logic level and use pin
+
+                  looking into web page - will move to esp32v2 with more room
 
 
 
@@ -120,15 +126,15 @@
                               19 MISO
                               33 SD_CS
               Inputs -
-                              34 SensorPin analog
-                              15,32,14,21 rotory select sw
-                              4 encoder sw
-                                enca, encb
+                              *not used - 34 SensorPin analog
+                              4,21,25,26 rotory select sw
+                              14 encoder sw
+                              32 enca,  15 encb
                               36 blue tooth connect from bt board
               Outputs -
                               12 AlarmPin
                               13 PumpPin
-                              27 CL Pump    // currently being used for toggle pin during SD_Update
+                              *not used maybe now as input - 27 CL Pump
               Bluetooth -
                               17 tx
                               16 rx
@@ -144,7 +150,7 @@
               Relays: Pump, CL Pump
               Leds: Alarm, Pump, CL Pump, BTStatus
               switches: BT Connect(reset?), rotate knob auto/man,alarm,pump
-12v out = 100ma on start, 250ma with relay on
+12v out = 100ma on start, 250ma with relay on, 310ma with sensor max val
 ******************************************************************/
 
 /**********************************************
