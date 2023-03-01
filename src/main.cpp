@@ -296,9 +296,9 @@ Ticker DisplayOffTimer; // when to blank display
 Ticker CLPumpTimer;     // how long to run CLPump
 
 //// timer intervals
-float SD_interval = 60;             // sec for updating file on sd card
+float SD_interval = 600;            // sec for updating file on sd card
 unsigned int APP_interval = 500;    // ms for updating BT panel
-unsigned int Sensor_interval = 250; // ms for sensor reading
+unsigned int Sensor_interval = 500; // ms for sensor reading
 unsigned int DISP_interval = 250;   // ms for oled disp data update
 float DISP_TimeOut = 150;           // sec how long before blank screen
 float CLPump_RunTime = 5;           // sec for CL Pump to run
@@ -367,7 +367,7 @@ boolean SendAppDataFlag = OFF; // update flag
 // Declaration for an SSD1306 OLED_Display connected to I2C (SDA, SCL pins)
 // Adafruit_SSD1306 OLED_Display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 // 1000000=i2c clk during ssd,  1000000=i2c clk after ssd
-Adafruit_SSD1327 OLED_Display(128, 128, &Wire, OLED_RESET, 1000000, 400000);
+Adafruit_SSD1327 OLED_Display(128, 128, &Wire, OLED_RESET, 1000000);
 
 /*******************  rtc  *************************/
 RTC_PCF8523 rtc; // on feather logger board
@@ -989,7 +989,8 @@ void setup()
   TestMenu.choose(); // Test level Sensor
 
   TestMenu.nodeIndex = 2;
-  TestMenu.build(&OLED_Display); // test air sensor
+  TestMenu.build(&OLED_Display);
+  TestMenu.choose(); // test air sensor
   delay(1000);
 
   OLED_Display.clearDisplay();
@@ -1123,6 +1124,7 @@ void loop()
   {
     DisplayUpdate();
     DisplayUpdateFlag = OFF;
+    Serial.println("DisplayUpdate");
   }
 
   // Update SD Card *********/
@@ -1131,6 +1133,7 @@ void loop()
   {
     SD_Update();
     SDUpdateFlag = OFF;
+    Serial.println("SD_Update");
   }
 
   // Update Sensor *********/
@@ -1139,6 +1142,7 @@ void loop()
   {
     // Sensor Level Read();
     StatusLevelSensor = ReadLevelSensor(&ina3221, &Sensor_Level_Values, Chan2);
+    Serial.println("LevelSensorUpdate");
     // if bad reading run fault display
     if (StatusLevelSensor != 0)
     {
@@ -1148,8 +1152,9 @@ void loop()
 
     // sensor air read
     StatusAirSensor = ReadAirPump(&AirFlowSensor, &AirPump);
-    Serial.printf("Status Air Sensor: %d", StatusAirSensor);
-    // if bad reading run fault display
+    Serial.println("AirSensorUpdate");
+    // Serial.printf("Status Air Sensor: %d", StatusAirSensor);
+    //  if bad reading run fault display
     if (StatusAirSensor != 0)
     {
       TestPwrSupply();
@@ -1566,118 +1571,122 @@ void TestPwrSupply()
 
   String Type = "";
 
-  for (int PSType = 0; PSType <= 2; PSType = PSType + 2)
+  /*************************************************************************/
+  // for (int PSType = 0; PSType <= 2; PSType = PSType + 2)
+  // {
+  //   if (PSType == 0)
+  //   {
+  //     Type = "12v";
+  //   }
+  //   else if (PSType == 2)
+  //   {
+  //     Type = "5v";
+  //   }
+  /*************************************************************************/
+  int PSType = 0;
+  Type = "12v";
+
+  for (int i = 0; i <= 6; i++)
   {
-    if (PSType == 0)
-    {
-      Type = "12v";
-    }
-    else if (PSType == 2)
-    {
-      Type = "5v";
-    }
 
-    for (int i = 0; i <= 6; i++)
-    {
-
-      StatusPS = ReadLevelSensor(&ina3221, &Sensor_Level_Values, PSType);
-      delay(100);
-    }
-    // set up display
-    //  OLED_Display.clearDisplay();
-    //  OLED_Display.setCursor(0, 0);
-    //  OLED_Display.setTextSize(2);
-
-    // OLED_Display.println("-Pwr Tst-");
-    //  OLED_Display.setCursor(0, 20);
-
-    // OLED_Display.printf(" %d", ENCValue);
-    // OLED_Display.setCursor(80, 20);
-    // OLED_Display.println("MM");
-
-    // OLED_Display.setTextSize(1);
-    // OLED_Display.println("");
-
-    // OLED_Display.display();
-
-    switch (StatusPS)
-    {
-
-    case 0: // good
-      // screen keeps blanking so reload to see again
-      TestMenu.nodeIndex = 0;
-      TestMenu.build(&OLED_Display);
-
-      // 12v/5v staus display print below menu
-      OLED_Display.setTextSize(2);
-      OLED_Display.printf("%s OK \n\r", Type.c_str());
-      OLED_Display.setTextSize(1);
-      OLED_Display.print("Volts: ");
-      OLED_Display.println(Sensor_Level_Values.BusV, 1);
-      OLED_Display.print("Current: ");
-      OLED_Display.println(Sensor_Level_Values.ShuntImA, 1);
-      OLED_Display.display();
-      delay(1000);
-      break;
-
-    case 1: // low
-      OLED_Display.setTextSize(2);
-      OLED_Display.printf("%s LOW \n", Type.c_str());
-      OLED_Display.setTextSize(1);
-      OLED_Display.println("");
-      OLED_Display.print("Volts: ");
-      OLED_Display.println(Sensor_Level_Values.BusV, 1);
-      // OLED_Display.printf("Volts: %d\n\r", Sensor_Level_Values.LoadV);
-      // OLED_Display.printf("Current: %f.1\n\r", Sensor_Level_Values.ShuntImA);
-      OLED_Display.print("Current: ");
-      OLED_Display.println(Sensor_Level_Values.ShuntImA, 1);
-      OLED_Display.println("");
-      OLED_Display.println("Check Wiring");
-      OLED_Display.println("");
-      OLED_Display.printf("Replace %s \n", Type.c_str());
-      OLED_Display.display();
-      AlarmToggle();
-      delay(5000);
-      AlarmToggle();
-      delay(1000);
-      break;
-
-    case 2: // high
-      OLED_Display.setTextSize(2);
-      OLED_Display.printf("%s Failed \n", Type.c_str());
-      OLED_Display.setTextSize(1);
-      OLED_Display.println("");
-      // OLED_Display.printf("Volts: %d\n\r", Sensor_Level_Values.LoadV);
-      OLED_Display.print("Volts: ");
-      OLED_Display.println(Sensor_Level_Values.BusV, 1);
-      // OLED_Display.printf("Current: %f.1\n\r", Sensor_Level_Values.ShuntImA);
-      OLED_Display.print("Current: ");
-      OLED_Display.println(Sensor_Level_Values.ShuntImA, 1);
-      OLED_Display.println("");
-      OLED_Display.printf("Replace %s \n", Type.c_str());
-      OLED_Display.display();
-      AlarmToggle();
-      delay(5000);
-      AlarmToggle();
-      delay(1000);
-      break;
-
-    default:
-      OLED_Display.setTextSize(2);
-      OLED_Display.println("Something wrong");
-      OLED_Display.setTextSize(1);
-      OLED_Display.println("");
-      OLED_Display.println("Push Reset");
-      OLED_Display.println("");
-      OLED_Display.println("Check PS");
-      OLED_Display.display();
-      delay(5000);
-      break;
-    }
-    OLED_Display.clearDisplay();
-    OLED_Display.setCursor(0, 0);
-    OLED_Display.display();
+    StatusPS = ReadLevelSensor(&ina3221, &Sensor_Level_Values, PSType);
+    delay(100);
   }
+  // set up display
+  //  OLED_Display.clearDisplay();
+  //  OLED_Display.setCursor(0, 0);
+  //  OLED_Display.setTextSize(2);
+
+  // OLED_Display.println("-Pwr Tst-");
+  //  OLED_Display.setCursor(0, 20);
+
+  // OLED_Display.printf(" %d", ENCValue);
+  // OLED_Display.setCursor(80, 20);
+  // OLED_Display.println("MM");
+
+  // OLED_Display.setTextSize(1);
+  // OLED_Display.println("");
+
+  // OLED_Display.display();
+
+  switch (StatusPS)
+  {
+
+  case 0: // good
+    // screen keeps blanking so reload to see again
+    TestMenu.nodeIndex = 0;
+    TestMenu.build(&OLED_Display);
+
+    // 12v/5v staus display print below menu
+    OLED_Display.setTextSize(2);
+    OLED_Display.printf("%s OK \n\r", Type.c_str());
+    OLED_Display.setTextSize(1);
+    OLED_Display.print("Volts: ");
+    OLED_Display.println(Sensor_Level_Values.BusV, 1);
+    OLED_Display.print("Current: ");
+    OLED_Display.println(Sensor_Level_Values.ShuntImA, 1);
+    OLED_Display.display();
+    delay(1000);
+    break;
+
+  case 1: // low
+    OLED_Display.setTextSize(2);
+    OLED_Display.printf("%s LOW \n", Type.c_str());
+    OLED_Display.setTextSize(1);
+    OLED_Display.println("");
+    OLED_Display.print("Volts: ");
+    OLED_Display.println(Sensor_Level_Values.BusV, 1);
+    // OLED_Display.printf("Volts: %d\n\r", Sensor_Level_Values.LoadV);
+    // OLED_Display.printf("Current: %f.1\n\r", Sensor_Level_Values.ShuntImA);
+    OLED_Display.print("Current: ");
+    OLED_Display.println(Sensor_Level_Values.ShuntImA, 1);
+    OLED_Display.println("");
+    OLED_Display.println("Check Wiring");
+    OLED_Display.println("");
+    OLED_Display.printf("Replace %s \n", Type.c_str());
+    OLED_Display.display();
+    AlarmToggle();
+    delay(5000);
+    AlarmToggle();
+    delay(1000);
+    break;
+
+  case 2: // high
+    OLED_Display.setTextSize(2);
+    OLED_Display.printf("%s Failed \n", Type.c_str());
+    OLED_Display.setTextSize(1);
+    OLED_Display.println("");
+    // OLED_Display.printf("Volts: %d\n\r", Sensor_Level_Values.LoadV);
+    OLED_Display.print("Volts: ");
+    OLED_Display.println(Sensor_Level_Values.BusV, 1);
+    // OLED_Display.printf("Current: %f.1\n\r", Sensor_Level_Values.ShuntImA);
+    OLED_Display.print("Current: ");
+    OLED_Display.println(Sensor_Level_Values.ShuntImA, 1);
+    OLED_Display.println("");
+    OLED_Display.printf("Replace %s \n", Type.c_str());
+    OLED_Display.display();
+    AlarmToggle();
+    delay(5000);
+    AlarmToggle();
+    delay(1000);
+    break;
+
+  default:
+    OLED_Display.setTextSize(2);
+    OLED_Display.println("Something wrong");
+    OLED_Display.setTextSize(1);
+    OLED_Display.println("");
+    OLED_Display.println("Push Reset");
+    OLED_Display.println("");
+    OLED_Display.println("Check PS");
+    OLED_Display.display();
+    delay(5000);
+    break;
+  }
+  OLED_Display.clearDisplay();
+  OLED_Display.setCursor(0, 0);
+  OLED_Display.display();
+  //}
 }
 
 void TestLevelSensor()
@@ -1815,7 +1824,7 @@ void TestAirSensor()
     // OLED_Display.printf("Volts: %d\n\r", Sensor_Level_Values.LoadV);
     // OLED_Display.printf("Current: %f.1\n\r", Sensor_Level_Values.ShuntImA);
 
-    //OLED_Display.println("");
+    // OLED_Display.println("");
     OLED_Display.setTextSize(2);
     OLED_Display.println("Passed");
     OLED_Display.setTextSize(1);
@@ -1830,7 +1839,7 @@ void TestAirSensor()
   case 1:
 
     OLED_Display.setTextSize(2);
-    OLED_Display.println("Sensor Not Found");
+    OLED_Display.println("Air Sensor Not Found");
     OLED_Display.setTextSize(1);
     OLED_Display.println("");
     OLED_Display.println("Check Sensor I/F");
@@ -1847,7 +1856,7 @@ void TestAirSensor()
     break;
 
   case 2:
-    //OLED_Display.println("");
+    // OLED_Display.println("");
     OLED_Display.setTextSize(2);
 
     OLED_Display.println("LOW");
@@ -1866,7 +1875,7 @@ void TestAirSensor()
     break;
 
   case 3:
-    //OLED_Display.println("");
+    // OLED_Display.println("");
     OLED_Display.setTextSize(2);
 
     OLED_Display.println("HI");
@@ -1906,7 +1915,7 @@ void DisplayOff(void)
 {
 
   // DisplayState = OFF;
-  Serial.println("DisplayOff");
+  //Serial.println("DisplayOff");
   Serial.printf("DisplayOffSSWMode %i \n", SSWMode);
   //  did we time out while in AutoControl and not in BT
   if (SSWMode == 1) // && BTStatusFlag == OFF)
@@ -2037,7 +2046,7 @@ void DisplayUpdate(void)
         if (SWEncoderFlag)
         {
           MenuChoose(2);
-          Serial.println("                AlarmMenuChoose");
+          //Serial.println("                AlarmMenuChoose");
         }
         break;
 
@@ -2068,7 +2077,7 @@ void DisplayUpdate(void)
         {
 
           MenuChoose(4);
-          Serial.printf("                PumpMenuChoose SWEncoderFlag %d", SWEncoderFlag);
+          //Serial.printf("                PumpMenuChoose SWEncoderFlag %d", SWEncoderFlag);
         }
 
         break;
@@ -2110,14 +2119,14 @@ void rotary_loop()
     {
 
       PumpMenu.nodeIndex = ENCValue; // move enc value to menu
-      Serial.printf("PMPENC: %d \n\r", ENCValue);
+      //Serial.printf("PMPENC: %d \n\r", ENCValue);
     }
 
     if (SSWMode == 2)
     {
 
       AlarmMenu.nodeIndex = ENCValue;
-      Serial.printf("ALMENC: %d \n\r", ENCValue);
+      //Serial.printf("ALMENC: %d \n\r", ENCValue);
     }
   }
 
@@ -2161,7 +2170,7 @@ void pressed(Button2 &btn)
    * *****************  temp  ***************************************************
    * *************************************************************************/
 
-  Serial.print("pressed ");
+  //Serial.print("pressed ");
 
   // look at switch when BT NOT connected
   if (BTStatusFlag == OFF)
@@ -2170,7 +2179,7 @@ void pressed(Button2 &btn)
     if (btn == SSWAuto)
     {
 
-      Serial.println("SSWAuto");
+      //Serial.println("SSWAuto");
 
       // keep track of SSW position
       PumpPositionFlag = OFF;
@@ -2202,7 +2211,7 @@ void pressed(Button2 &btn)
     else if (btn == SSWAlarm)
     {
 
-      Serial.println("SSWAlarm");
+      //Serial.println("SSWAlarm");
 
       SSWMode = 2;
       // keep track of SSW position
@@ -2254,7 +2263,7 @@ void pressed(Button2 &btn)
 
     else if (btn == SSWPump)
     {
-      Serial.println("SSWPump");
+      //Serial.println("SSWPump");
       SSWMode = 4;
 
       PumpPositionFlag = ON;
@@ -2352,7 +2361,7 @@ void Pump(void)
     {
       digitalWrite(PumpPin, ON);
       PumpStatus = ON;
-      Serial.println(" AutoPumpStatusON ");
+      //Serial.println(" AutoPumpStatusON ");
       // DEBUGPRINTLN(PumpStatus);
       CLPumpRunOnce = ON;
     }
@@ -2372,14 +2381,14 @@ void Pump(void)
     {
       digitalWrite(PumpPin, ON);
       PumpStatus = ON;
-      Serial.println("ManPumpStatusON ");
+      //Serial.println("ManPumpStatusON ");
       //  DEBUGPRINTLN(PumpStatus);
     }
     else
     {
       digitalWrite(PumpPin, OFF);
       PumpStatus = OFF;
-      Serial.println("ManPumpStatusOFF ");
+      //Serial.println("ManPumpStatusOFF ");
       //  DEBUGPRINTLN(PumpStatus);
     }
   }

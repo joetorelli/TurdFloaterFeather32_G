@@ -56,50 +56,39 @@ int ReadAirPump(Adafruit_MPRLS *AirSen, AirSensor *AirSenVal)
 {
     int SensorFailType = 0;
     int Reading = 0;
+
     AirSenVal->pressure_hPa = AirSen->readPressure();
     AirSenVal->pressure_PSI = AirSenVal->pressure_hPa / 68.947572932;
-    Serial.print("Pressure (hPa): ");
-    Serial.println(AirSenVal->pressure_hPa);
-    Serial.print("Pressure (PSI): ");
-    Serial.println(AirSenVal->pressure_PSI);
+    // Serial.print("Pressure (hPa): ");
+    //Serial.println(AirSenVal->pressure_hPa);
+    // Serial.print("Pressure (PSI): ");
+    //Serial.println(AirSenVal->pressure_PSI);
     Reading = AirSenVal->pressure_hPa;
-    // test
-    switch (Reading)
+
+    if (isnan(AirSenVal->pressure_hPa)) // not found
     {
-    case 0:
+        Reading = 0;
         SensorFailType = 1;
-        break;
-    case 900 ... 950:
+        // Serial.printf("**************NAN Air Sensor: %d", SensorFailType);
+    }
+    else if (AirSenVal->pressure_hPa <= 950) // low filter clogged?
+
+    {
         SensorFailType = 2;
-        break;
-    case 1050 ... 1100:
+        // Serial.printf("**************LOW Air Sensor: %d", SensorFailType);
+    }
+    else if (AirSenVal->pressure_hPa >= 1100) // hi air plugged?
+
+    {
         SensorFailType = 3;
-        break;
-    default:
-        SensorFailType = 0;
-        break;
+        // Serial.printf("**************HIGH Air Sensor: %d", SensorFailType);
     }
-
-/*     if (AirSenVal->pressure_hPa == 0)
-    {
-    }
-    else if (AirSenVal->pressure_hPa < 950) //
-    {
-
-        // SensorFailCount++;
-        SensorFailType = 1;
-    }
-    else if (AirSenVal->pressure_hPa > 1055) //
-    {
-        // SensorFailCount++;
-        SensorFailType = 2;
-    }
-    else
+    else // good
     {
         SensorFailType = 0;
-    } */
-    
-    Serial.printf("Status Air Sensor: %d", SensorFailType);
+        // Serial.printf("**************GOOD Air Sensor: %d", SensorFailType);
+    }
+
     return SensorFailType;
 }
 
@@ -143,28 +132,6 @@ int ReadLevelSensor(SDL_Arduino_INA3221 *LevSensor, LevelSensor *SensorLevelVal,
     SensorLevelVal->BusV = voltage[CNum];
     SensorLevelVal->ShuntVmv = shunt[CNum];
     SensorLevelVal->LoadV = LoadV[CNum];
-
-    // SensorLevelVal->DepthMM = mapf(current_ma[INA3221_CH2], in_min[INA3221_CH2], in_max[INA3221_CH2], out_min[INA3221_CH2], out_max[INA3221_CH2]);
-
-    // SensorLevelVal->ShuntImA = current_ma[INA3221_CH2];
-    // SensorLevelVal->BusV = voltage[INA3221_CH2];
-    // SensorLevelVal->ShuntVmv = shunt[INA3221_CH2];
-    // SensorLevelVal->LoadV = LoadV[INA3221_CH2];
-    // SensorLevelVal->DepthIn = SensorLevelVal->DepthMM / 25.4;
-
-    /*     Serial.println("Vals In Struct SensorLevelVal for C2");
-        Serial.print("ShuntImA: ");
-        Serial.print(SensorLevelVal->ShuntImA);
-        Serial.print(" BusV: ");
-        Serial.print(SensorLevelVal->BusV);
-        Serial.print(" ShuntVmv: ");
-        Serial.print(SensorLevelVal->ShuntVmv);
-        Serial.print(" LoadV: ");
-        Serial.print(SensorLevelVal->LoadV);
-        Serial.print(" DepthMM: ");
-        Serial.print(SensorLevelVal->DepthMM);
-        Serial.print(" DepthIN: ");
-        Serial.println(SensorLevelVal->DepthIn); */
 
     // test for 12v bad reading
     if (CNum == 0)
