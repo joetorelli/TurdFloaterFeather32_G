@@ -74,11 +74,13 @@
               done - moved to ssd1327 1.5" 128x128 oled display
               done - added CLPump on/off
               done - adding diags to menu start, and monitor during run time
+              done - working, need to add mprls pressure sensor to read air pump, menu's good
+
 
               inwork -
                   splitting files
                   menu system setup
-                  working, need to add mprls pressure sensor to read air pump
+                  
                   add mag sw to check for CL tablet level and not use cl pump
                   looking into web page
 
@@ -1585,7 +1587,9 @@ void TestPwrSupply()
   /*************************************************************************/
   int PSType = 0;
   Type = "12v";
-
+  OLED_Display.setTextSize(1);
+  OLED_Display.println("Testing...");
+  OLED_Display.display();
   for (int i = 0; i <= 6; i++)
   {
 
@@ -1707,7 +1711,9 @@ void TestLevelSensor()
   // // OLED_Display.println("");
   // OLED_Display.println("Please wait...");
   // OLED_Display.display();
-
+  OLED_Display.setTextSize(1);
+  OLED_Display.println("Testing...");
+  OLED_Display.display();
   for (int i = 0; i <= 6; i++)
   {
     StatusLevelSensor = ReadLevelSensor(&ina3221, &Sensor_Level_Values, Chan2);
@@ -1736,7 +1742,7 @@ void TestLevelSensor()
 
   case 1:
     OLED_Display.setTextSize(2);
-    OLED_Display.println("Sensor Not Found");
+    OLED_Display.println("LVL SensorNot Found");
     OLED_Display.setTextSize(1);
     OLED_Display.println("");
     OLED_Display.println("Check Sensor I/F");
@@ -1808,7 +1814,9 @@ void TestAirSensor()
   // // OLED_Display.println("");
   // OLED_Display.println("Please wait...");
   // OLED_Display.display();
-
+  OLED_Display.setTextSize(1);
+  OLED_Display.println("Testing...");
+  OLED_Display.display();
   for (int i = 0; i <= 6; i++)
   {
     // sensor air read
@@ -1839,7 +1847,7 @@ void TestAirSensor()
   case 1:
 
     OLED_Display.setTextSize(2);
-    OLED_Display.println("Air Sensor Not Found");
+    OLED_Display.println("Air SensorNot Found");
     OLED_Display.setTextSize(1);
     OLED_Display.println("");
     OLED_Display.println("Check Sensor I/F");
@@ -1915,7 +1923,7 @@ void DisplayOff(void)
 {
 
   // DisplayState = OFF;
-  //Serial.println("DisplayOff");
+  // Serial.println("DisplayOff");
   Serial.printf("DisplayOffSSWMode %i \n", SSWMode);
   //  did we time out while in AutoControl and not in BT
   if (SSWMode == 1) // && BTStatusFlag == OFF)
@@ -2046,7 +2054,7 @@ void DisplayUpdate(void)
         if (SWEncoderFlag)
         {
           MenuChoose(2);
-          //Serial.println("                AlarmMenuChoose");
+          // Serial.println("                AlarmMenuChoose");
         }
         break;
 
@@ -2077,7 +2085,7 @@ void DisplayUpdate(void)
         {
 
           MenuChoose(4);
-          //Serial.printf("                PumpMenuChoose SWEncoderFlag %d", SWEncoderFlag);
+          // Serial.printf("                PumpMenuChoose SWEncoderFlag %d", SWEncoderFlag);
         }
 
         break;
@@ -2119,14 +2127,14 @@ void rotary_loop()
     {
 
       PumpMenu.nodeIndex = ENCValue; // move enc value to menu
-      //Serial.printf("PMPENC: %d \n\r", ENCValue);
+      // Serial.printf("PMPENC: %d \n\r", ENCValue);
     }
 
     if (SSWMode == 2)
     {
 
       AlarmMenu.nodeIndex = ENCValue;
-      //Serial.printf("ALMENC: %d \n\r", ENCValue);
+      // Serial.printf("ALMENC: %d \n\r", ENCValue);
     }
   }
 
@@ -2170,7 +2178,7 @@ void pressed(Button2 &btn)
    * *****************  temp  ***************************************************
    * *************************************************************************/
 
-  //Serial.print("pressed ");
+  // Serial.print("pressed ");
 
   // look at switch when BT NOT connected
   if (BTStatusFlag == OFF)
@@ -2179,7 +2187,7 @@ void pressed(Button2 &btn)
     if (btn == SSWAuto)
     {
 
-      //Serial.println("SSWAuto");
+      // Serial.println("SSWAuto");
 
       // keep track of SSW position
       PumpPositionFlag = OFF;
@@ -2211,7 +2219,7 @@ void pressed(Button2 &btn)
     else if (btn == SSWAlarm)
     {
 
-      //Serial.println("SSWAlarm");
+      // Serial.println("SSWAlarm");
 
       SSWMode = 2;
       // keep track of SSW position
@@ -2263,7 +2271,7 @@ void pressed(Button2 &btn)
 
     else if (btn == SSWPump)
     {
-      //Serial.println("SSWPump");
+      // Serial.println("SSWPump");
       SSWMode = 4;
 
       PumpPositionFlag = ON;
@@ -2361,8 +2369,8 @@ void Pump(void)
     {
       digitalWrite(PumpPin, ON);
       PumpStatus = ON;
-      //Serial.println(" AutoPumpStatusON ");
-      // DEBUGPRINTLN(PumpStatus);
+      // Serial.println(" AutoPumpStatusON ");
+      //  DEBUGPRINTLN(PumpStatus);
       CLPumpRunOnce = ON;
     }
 
@@ -2381,15 +2389,15 @@ void Pump(void)
     {
       digitalWrite(PumpPin, ON);
       PumpStatus = ON;
-      //Serial.println("ManPumpStatusON ");
-      //  DEBUGPRINTLN(PumpStatus);
+      // Serial.println("ManPumpStatusON ");
+      //   DEBUGPRINTLN(PumpStatus);
     }
     else
     {
       digitalWrite(PumpPin, OFF);
       PumpStatus = OFF;
-      //Serial.println("ManPumpStatusOFF ");
-      //  DEBUGPRINTLN(PumpStatus);
+      // Serial.println("ManPumpStatusOFF ");
+      //   DEBUGPRINTLN(PumpStatus);
     }
   }
 }
