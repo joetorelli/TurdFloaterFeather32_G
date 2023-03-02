@@ -75,14 +75,16 @@
               done - added CLPump on/off
               done - adding diags to menu start, and monitor during run time
               done - working, need to add mprls pressure sensor to read air pump, menu's good
+              done - add mag sw to check for CL tablet level and not use cl pump
+                      need to check BT because removed CL Pump
 
 
               inwork -
                   splitting files
                   menu system setup
-                  
-                  add mag sw to check for CL tablet level and not use cl pump
-                  looking into web page
+
+
+                  looking into web page, will move to esp32v2
 
 
 
@@ -193,10 +195,10 @@
 **********************************************/
 /********************************* changed pin definition on ver F
  * stopped using analog and allowed for better connections  ****************/
-#define AlarmPin 12  // Alarm
-#define PumpPin 13   //  Pump
-#define CLPumpPin 27 //  Chlorine Pump
-// #define SensorPin 34 ////////////////// Sensor
+#define AlarmPin 12 // Alarm
+#define PumpPin 13  //  Pump
+// #define CLPumpPin 27 //  Chlorine Pump
+//  #define SensorPin 34 ////////////////// Sensor
 
 #define SD_CS 33 // SD Card
 
@@ -212,12 +214,14 @@
 
 /*********************** button2  **********************/
 // SSW SelectSWitch
-#define SSWAutoPin 21 // auto/man pos
-#define SSWAlarmPin 4 // alarm pos
-#define SSWOffPin 25  // off pos
-#define SSWPumpPin 26 // pump pos
+#define SSWAutoPin 39  // 21 // auto/man pos
+#define SSWAlarmPin 34 // 4 // alarm pos
+#define SSWOffPin 25   // off pos
+#define SSWPumpPin 26  // pump pos
 
 #define SWEncoderPin 14 // enc push button
+
+#define CLLevelSW 21
 
 // Rotary Encoder
 #define ROTARY_ENCODER_A_PIN 32
@@ -245,9 +249,9 @@ byte PumpManFlag = OFF;   // pump sw state
 byte AlarmStatus = OFF;   // Alarm On/Off
 byte AlarmManFlag = OFF;  // Alarm sw state
 byte AutoManControl = ON; // auto/manual sw state
-byte CLPumpStatus = OFF;  // CLPump On/Off
-byte CLPumpManFlag = OFF; // CLpump sw state
-byte CLPumpRunOnce = OFF; // run CLPump after Pump stops
+// byte CLPumpStatus = OFF;  // CLPump On/Off
+// byte CLPumpManFlag = OFF; // CLpump sw state
+// byte CLPumpRunOnce = OFF; // run CLPump after Pump stops
 
 /*************************** BT APP Vars ********************/
 int BTStatusFlag = OFF;
@@ -257,7 +261,7 @@ char data_in; // data received from Serial1 link BT
 byte PumpManFl = OFF;
 byte AlarmManFl = OFF;
 byte AMSwitchFl = OFF;
-byte CLPumpManFl = OFF;
+// byte CLPumpManFl = OFF;
 
 // sliders
 int PumpOnLevelSliderValue;
@@ -272,7 +276,7 @@ int PumpOnLevelDisplayValue;
 int PumpOffLevelDisplayValue;
 int AlarmOnLevelDisplayValue;
 int AlarmOffLevelDisplayValue;
-int CLTimerDisplayValue;
+// int CLTimerDisplayValue;
 int AlarmVolDisplayValue;
 boolean DisplayState = ON;
 
@@ -283,7 +287,7 @@ int bubbles;          // Bubble Gauge Value
 
 int PumpPlotVal = 0;
 int AlarmPlotVal = 0;
-int CLPumpPlotVal = 0;
+int CLPlotVal = 0;
 
 // FLAGS
 int Page1Once = 1;
@@ -295,7 +299,7 @@ Ticker APPTimer;        // how often to Update BT App
 Ticker SensorTimer;     // how often to Read Sensor
 Ticker DisPlayTimer;    // how often to update OLED
 Ticker DisplayOffTimer; // when to blank display
-Ticker CLPumpTimer;     // how long to run CLPump
+// Ticker CLPumpTimer;     // how long to run CLPump
 
 //// timer intervals
 float SD_interval = 600;            // sec for updating file on sd card
@@ -303,7 +307,7 @@ unsigned int APP_interval = 500;    // ms for updating BT panel
 unsigned int Sensor_interval = 500; // ms for sensor reading
 unsigned int DISP_interval = 250;   // ms for oled disp data update
 float DISP_TimeOut = 150;           // sec how long before blank screen
-float CLPump_RunTime = 5;           // sec for CL Pump to run
+// float CLPump_RunTime = 5;           // sec for CL Pump to run
 
 /**************************** Switches ****************************/
 struct Select_SW Switch_State; // switch position
@@ -326,10 +330,10 @@ Preferences Settings; // NVM
 
 void WriteData(void); // save to eprom
 
-void Alarm(void);     // alarm control auto/man & on/off
-void Pump(void);      // pump control auto/man & on/off
-void CLPump(void);    // CLpump control on sets timer for off
-void CLPumpOFF(void); // CLPump off
+void Alarm(void); // alarm control auto/man & on/off
+void Pump(void);  // pump control auto/man & on/off
+// void CLPump(void);    // CLpump control on sets timer for off
+// void CLPumpOFF(void); // CLPump off
 
 void BuildPanel(void); // builds app panels on phone
 
@@ -353,7 +357,7 @@ void SD_Update();           // write to sd file
 void SD_UpdateSetFlag();    // set flag to run SD update
 boolean SDUpdateFlag = OFF; // update flag
 
-void SensorRead();            // read sensor value
+// void SensorRead();            // read sensor value
 void SensorReadSetFlag();     // set flag to run sd update
 boolean SensorReadFlag = OFF; // update flag
 
@@ -441,6 +445,7 @@ void pressed(Button2 &btn); // when button/sw pressed
 Adafruit_MPRLS AirFlowSensor = Adafruit_MPRLS(RESET_PIN, EOC_PIN);
 struct AirSensor AirPump;
 int StatusAirSensor = 0;
+bool StatusCLSensor = false;
 /****************************  menu code  ***************************/
 menuFrame AlarmMenu; // runs when SSW in Alarm Position
 menuFrame PumpMenu;  // runs when SSW in Pump Position
@@ -450,16 +455,17 @@ menuFrame TestMenu;  // runs when Program Starts
 void testFunct();
 void TestLevelSensor();
 void TestAirSensor();
+void TestCLSensor();
 void TestPwrSupply();
 void PumpOnAdjust();
 void PumpOffAdjust();
 void AlarmOnAdjust();
 void AlarmOffAdjust();
-void CLTimeAdjust();
+// void CLTimeAdjust();
 void VolumeAdjust();
 void PumpToggle();
 void AlarmToggle();
-void CLPumpToggle();
+// void CLPumpToggle();
 void MenuChoose(int Mode);
 
 /********  physical poistion of SSW ***********/
@@ -483,7 +489,7 @@ void setup()
   // relay
   pinMode(AlarmPin, OUTPUT);
   pinMode(PumpPin, OUTPUT);
-  pinMode(CLPumpPin, OUTPUT);
+  // pinMode(CLPumpPin, OUTPUT);
 
   // select sw
   pinMode(SSWAutoPin, INPUT_PULLUP);
@@ -494,10 +500,13 @@ void setup()
   // BT mod
   pinMode(BTStatusPin, INPUT_PULLUP);
 
+  // CL Mag SW
+  pinMode(CLLevelSW, INPUT);
+
   //// turn off outputs
   digitalWrite(AlarmPin, OFF);
   digitalWrite(PumpPin, OFF);
-  digitalWrite(CLPumpPin, OFF);
+  // digitalWrite(CLPumpPin, OFF);
 
   /********************   init i2c  *****************/
   Wire.begin(I2c_SDA, I2c_SCL);
@@ -831,7 +840,7 @@ void setup()
     Settings.putInt("PumpOffLevel", 1500);
     Settings.putInt("AlarmOnLevel", 2200);
     Settings.putInt("AlarmOffLevel", 2000);
-    Settings.putInt("CLTimer", 5);
+    // Settings.putInt("CLTimer", 5);
     Settings.putInt("AlarmVol", 50);
     Settings.putInt("NVSInit", true);
     Settings.end();                     // close the namespace
@@ -843,7 +852,7 @@ void setup()
   PumpOffLevel = Settings.getInt("PumpOffLevel");
   AlarmOnLevel = Settings.getInt("AlarmOnLevel");
   AlarmOffLevel = Settings.getInt("AlarmOffLevel");
-  CLPump_RunTime = Settings.getInt("CLTimer");
+  // CLPump_RunTime = Settings.getInt("CLTimer");
   AlarmVol = Settings.getInt("AlarmVol");
   Settings.end(); // close the namespace
 
@@ -852,7 +861,7 @@ void setup()
   PumpOffLevelSliderValue = PumpOffLevel;
   AlarmOnLevelSliderValue = AlarmOnLevel;
   AlarmOffLevelSliderValue = AlarmOffLevel;
-  CLTimerSliderValue = CLPump_RunTime;
+  // CLTimerSliderValue = CLPump_RunTime;
   AlarmVolSliderValue = AlarmVol;
 
   // Load Display values
@@ -860,7 +869,7 @@ void setup()
   PumpOffLevelDisplayValue = PumpOffLevel;
   AlarmOnLevelDisplayValue = AlarmOnLevel;
   AlarmOffLevelDisplayValue = AlarmOffLevel;
-  CLTimerDisplayValue = CLPump_RunTime;
+  // CLTimerDisplayValue = CLPump_RunTime;
   AlarmVolDisplayValue = AlarmVol;
 
   /************************************ encoder  *********************/
@@ -961,8 +970,8 @@ void setup()
   PumpMenu.addNode("ON/OFF", ACT_NODE, &PumpToggle);
   PumpMenu.addNode("On Level", ACT_NODE, &PumpOnAdjust);
   PumpMenu.addNode("Off Level", ACT_NODE, &PumpOffAdjust);
-  PumpMenu.addNode("CL ON/OFF", ACT_NODE, &CLPumpToggle);
-  PumpMenu.addNode("CL Time", ACT_NODE, &CLTimeAdjust);
+  // PumpMenu.addNode("CL ON/OFF", ACT_NODE, &CLPumpToggle);
+  // PumpMenu.addNode("CL Time", ACT_NODE, &CLTimeAdjust);
 
   // Alarm Menu
   AlarmMenu.addMenu("Alarm", 0);
@@ -975,6 +984,7 @@ void setup()
   TestMenu.addNode("PowerSupply", ACT_NODE, &TestPwrSupply);
   TestMenu.addNode("LvlSensor", ACT_NODE, &TestLevelSensor);
   TestMenu.addNode("AirSensor", ACT_NODE, &TestAirSensor);
+  TestMenu.addNode("CLSensor", ACT_NODE, &TestCLSensor);
 
   OLED_Display.setTextColor(SSD1327_WHITE);
 
@@ -993,6 +1003,11 @@ void setup()
   TestMenu.nodeIndex = 2;
   TestMenu.build(&OLED_Display);
   TestMenu.choose(); // test air sensor
+  delay(1000);
+
+  TestMenu.nodeIndex = 3;
+  TestMenu.build(&OLED_Display);
+  TestMenu.choose(); // test cl sensor
   delay(1000);
 
   OLED_Display.clearDisplay();
@@ -1059,14 +1074,14 @@ void loop()
       }
 
       // man cl pump sw
-      if (data_in == 'U') // sw on
-      {
-        CLPumpManFl = ON;
-      }
-      if (data_in == 'u') // sw on
-      {
-        CLPumpManFl = OFF;
-      }
+      // if (data_in == 'U') // sw on
+      // {
+      //   CLPumpManFl = ON;
+      // }
+      // if (data_in == 'u') // sw on
+      // {
+      //   CLPumpManFl = OFF;
+      // }
 
       // auto/man switch
       if (data_in == 'K') // sw on
@@ -1103,11 +1118,11 @@ void loop()
       }
 
       // cl level
-      if (data_in == 'R')
-      { //  Slider
-        // CLTimerSliderValue = Serial1.parseInt(SKIP_NONE, 'R');
-        CLTimerSliderValue = Serial1.parseInt();
-      }
+      // if (data_in == 'R')
+      // { //  Slider
+      //   // CLTimerSliderValue = Serial1.parseInt(SKIP_NONE, 'R');
+      //   CLTimerSliderValue = Serial1.parseInt();
+      // }
 
       // alarm vol
       if (data_in == 'S')
@@ -1163,6 +1178,17 @@ void loop()
       TestAirSensor();
     }
 
+    // sensor cl level read
+    StatusCLSensor = ReadCLSensor(CLLevelSW);
+    Serial.println("CLSensorUpdate");
+    // Serial.printf("Status Air Sensor: %d", StatusAirSensor);
+    //  if bad reading run fault display
+    if (StatusCLSensor == ON) // mag detected
+    {
+      TestPwrSupply();
+      TestCLSensor();
+    }
+
     SensorReadFlag = OFF;
   }
 
@@ -1182,7 +1208,7 @@ void loop()
   }
   /********* run every loop *********/
   Pump();
-  CLPump();
+  // CLPump();
   Alarm();
 }
 
@@ -1422,7 +1448,7 @@ void AlarmOffAdjust()
   // PumpMenu.choose();
 }
 
-void CLTimeAdjust()
+/* void CLTimeAdjust()
 {
 
   // turn flag off
@@ -1476,7 +1502,7 @@ void CLTimeAdjust()
   ENCValue = 0;
   PumpMenu.nodeIndex = 0;
   // PumpMenu.choose();
-}
+} */
 
 void VolumeAdjust()
 {
@@ -1543,12 +1569,12 @@ void PumpToggle()
 }
 
 // toggle clpump on/off
-void CLPumpToggle()
+/* void CLPumpToggle()
 {
 
   CLPumpManFlag = !CLPumpManFlag;
   digitalWrite(CLPumpPin, CLPumpManFlag);
-}
+} */
 
 // toggle alram on/off
 void AlarmToggle()
@@ -1566,7 +1592,8 @@ void testFunct()
 // read ina chans for power supply
 void TestPwrSupply()
 {
-  // int PSType = 0;
+  // removed 5v test for now
+  //  int PSType = 0;
   int StatusPS = 0;
 
   // pstype is chan1(0)=12v or chan3(2)=5v on ina3221 board
@@ -1711,6 +1738,10 @@ void TestLevelSensor()
   // // OLED_Display.println("");
   // OLED_Display.println("Please wait...");
   // OLED_Display.display();
+
+  TestMenu.nodeIndex = 1;
+  TestMenu.build(&OLED_Display);
+
   OLED_Display.setTextSize(1);
   OLED_Display.println("Testing...");
   OLED_Display.display();
@@ -1727,7 +1758,8 @@ void TestLevelSensor()
 
     // OLED_Display.printf("Volts: %d\n\r", Sensor_Level_Values.LoadV);
     // OLED_Display.printf("Current: %f.1\n\r", Sensor_Level_Values.ShuntImA);
-
+    TestMenu.nodeIndex = 1;
+    TestMenu.build(&OLED_Display);
     OLED_Display.println("");
     OLED_Display.setTextSize(2);
     OLED_Display.println("Passed");
@@ -1828,7 +1860,8 @@ void TestAirSensor()
   {
 
   case 0:
-
+    TestMenu.nodeIndex = 2;
+    TestMenu.build(&OLED_Display);
     // OLED_Display.printf("Volts: %d\n\r", Sensor_Level_Values.LoadV);
     // OLED_Display.printf("Current: %f.1\n\r", Sensor_Level_Values.ShuntImA);
 
@@ -1889,7 +1922,7 @@ void TestAirSensor()
     OLED_Display.println("HI");
     OLED_Display.setTextSize(1);
     OLED_Display.println("");
-    OLED_Display.println("Check Air Filter");
+    OLED_Display.println("Check for plug");
     OLED_Display.print("HPA: ");
     OLED_Display.println(AirPump.pressure_hPa, 1);
     OLED_Display.print("PSI: ");
@@ -1916,6 +1949,61 @@ void TestAirSensor()
 
   // OLED_Display.print(("   Press to enter"));
   // OLED_Display.display();
+}
+
+void TestCLSensor()
+{
+
+  OLED_Display.setTextSize(1);
+  OLED_Display.println("Testing...");
+  OLED_Display.display();
+
+  for (int i = 0; i <= 6; i++)
+  {
+    // sensor cl read
+    StatusCLSensor = ReadCLSensor(CLLevelSW);
+    delay(100);
+  }
+
+  if (StatusCLSensor == ON) // mag detected
+  {
+
+    OLED_Display.setTextSize(2);
+    OLED_Display.println("Mag CLOSD");
+
+    OLED_Display.setTextSize(1);
+    OLED_Display.println("");
+    OLED_Display.println("Sensor Reading");
+    OLED_Display.println("");
+    OLED_Display.println("LOW Level");
+    OLED_Display.println("");
+    OLED_Display.println("Magnet Detected");
+    OLED_Display.println("");
+    OLED_Display.print("Add Tablet");
+    OLED_Display.display();
+
+    AlarmToggle();
+    delay(5000);
+    AlarmToggle();
+    delay(1000);
+  }
+
+  else
+  {
+
+    TestMenu.nodeIndex = 3;
+    TestMenu.build(&OLED_Display);
+    OLED_Display.setTextSize(2);
+    OLED_Display.println("Mag OPEN");
+    OLED_Display.setTextSize(1);
+    OLED_Display.println("Sensor Reading");
+    OLED_Display.println("HIGH Level");
+    OLED_Display.print("NO Magnet");
+
+    OLED_Display.display();
+
+    delay(1000);
+  }
 }
 
 // Blank Display
@@ -1972,12 +2060,12 @@ void DisplayOn(void)
 }
 
 // stop CLPump
-void CLPumpOFF(void)
+/* void CLPumpOFF(void)
 {
 
   digitalWrite(CLPumpPin, OFF);
   CLPumpStatus = OFF;
-}
+} */
 
 // set flag
 void DisplayUpdateSetFlag(void)
@@ -2005,10 +2093,10 @@ void DisplayUpdate(void)
     OLED_Display.printf(" On: %d Off: %d\n", PumpOnLevel, PumpOffLevel);
     OLED_Display.printf("Alarm: %d\n", AlarmStatus);
     OLED_Display.printf(" On: %d Off: %d\n", AlarmOnLevel, AlarmOffLevel);
-    OLED_Display.printf("CLPmp: %d\n", CLPumpStatus);
+    // OLED_Display.printf("CLPmp: %d\n", CLPumpStatus);
 
-    int x = CLPump_RunTime;
-    OLED_Display.printf(" RunTime: %d \n", x);
+    // int x = CLPump_RunTime;
+    // OLED_Display.printf(" RunTime: %d \n", x);
 
     OLED_Display.display();
     return;
@@ -2021,8 +2109,8 @@ void DisplayUpdate(void)
     if (BTStatusFlag == OFF) //  BT OFF
     {
 
-      int CLPRT = CLPump_RunTime;
-      // Serial.println("DisplayUpdate() / DisplayState=ON / BTStatusFlag=OFF");
+      // int CLPRT = CLPump_RunTime;
+      //  Serial.println("DisplayUpdate() / DisplayState=ON / BTStatusFlag=OFF");
       switch (SSWMode)
       {
 
@@ -2043,7 +2131,7 @@ void DisplayUpdate(void)
         OLED_Display.printf("Alarm Off: %d\r\n\n", AlarmOffLevel);
         OLED_Display.printf("Pump On:   %d\r\n\n", PumpOnLevel);
         OLED_Display.printf("PumpOff:   %d\r\n\n", PumpOffLevel);
-        OLED_Display.printf("CL Time:   %d\r\n", CLPRT);
+        // OLED_Display.printf("CL Time:   %d\r\n", CLPRT);
 
         OLED_Display.display();
         break;
@@ -2070,7 +2158,7 @@ void DisplayUpdate(void)
         OLED_Display.printf("Alarm Level Off: %d\r\n\n", AlarmOffLevel);
         OLED_Display.printf("Pump Level On:   %d\r\n\n", PumpOnLevel);
         OLED_Display.printf("Pump Level Off:  %d\r\n\n", PumpOffLevel);
-        OLED_Display.printf("CL Time:         %d\r\n\n", CLPRT);
+        // OLED_Display.printf("CL Time:         %d\r\n\n", CLPRT);
 
         OLED_Display.display();
 
@@ -2208,7 +2296,7 @@ void pressed(Button2 &btn)
 
         digitalWrite(PumpPin, OFF);
         digitalWrite(AlarmPin, OFF);
-        digitalWrite(CLPumpPin, OFF);
+        // digitalWrite(CLPumpPin, OFF);
         SSWMode = 1;
         DisplayOn();
         // DisplayState = ON;
@@ -2229,7 +2317,7 @@ void pressed(Button2 &btn)
       AutoPositionFlag = OFF;
 
       PumpManFlag = OFF;
-      CLPumpManFlag = OFF;
+      // CLPumpManFlag = OFF;
       AlarmManFlag = OFF; // set in menu
 
       AutoManControl = OFF;
@@ -2260,13 +2348,13 @@ void pressed(Button2 &btn)
       AutoPositionFlag = OFF;
 
       PumpManFlag = OFF;
-      CLPumpManFlag = OFF;
+      // CLPumpManFlag = OFF;
       AlarmManFlag = OFF;
 
       AutoManControl = OFF;
       digitalWrite(PumpPin, OFF);
       digitalWrite(AlarmPin, OFF);
-      digitalWrite(CLPumpPin, OFF);
+      // digitalWrite(CLPumpPin, OFF);
     }
 
     else if (btn == SSWPump)
@@ -2279,8 +2367,8 @@ void pressed(Button2 &btn)
       OffPositionFlag = OFF;
       AutoPositionFlag = OFF;
 
-      PumpManFlag = OFF;   // will be controlled by menu
-      CLPumpManFlag = OFF; // will be controlled by menu
+      PumpManFlag = OFF; // will be controlled by menu
+      // CLPumpManFlag = OFF; // will be controlled by menu
       AlarmManFlag = OFF;
 
       AutoManControl = OFF;
@@ -2371,7 +2459,7 @@ void Pump(void)
       PumpStatus = ON;
       // Serial.println(" AutoPumpStatusON ");
       //  DEBUGPRINTLN(PumpStatus);
-      CLPumpRunOnce = ON;
+      // CLPumpRunOnce = ON;
     }
 
     if (Sensor_Level_Values.DepthMM <= PumpOffLevel)
@@ -2403,7 +2491,7 @@ void Pump(void)
 }
 
 // CLPump Control
-void CLPump(void)
+/* void CLPump(void)
 {
   if (AutoManControl == ON) // auto
   {
@@ -2436,7 +2524,7 @@ void CLPump(void)
       //  DEBUGPRINTLN(CLPumpStatus);
     }
   }
-}
+} */
 
 void SendAppDataSetFlag()
 {
@@ -2475,20 +2563,20 @@ void SendAppData()
         AlarmPlotVal = 0;
       }
 
-      if (CLPumpStatus)
+      if (StatusCLSensor)
       {
-        CLPumpPlotVal = 250;
+        CLPlotVal = 250;
       }
       else
       {
-        CLPumpPlotVal = 0;
+        CLPlotVal = 0;
       }
       cntr++;
       if (cntr >= 1000)
       {
         cntr = 0;
       }
-      Serial1.print("*VX" + String(cntr) + "Y" + String(Sensor_Level_Values.DepthMM) + ",X" + String(cntr) + "Y" + String(PumpPlotVal) + ",X" + String(cntr) + "Y" + String(AlarmPlotVal) + ",X" + String(cntr) + "Y" + String(CLPumpPlotVal) + "*");
+      Serial1.print("*VX" + String(cntr) + "Y" + String(Sensor_Level_Values.DepthMM) + ",X" + String(cntr) + "Y" + String(PumpPlotVal) + ",X" + String(cntr) + "Y" + String(AlarmPlotVal) + ",X" + String(cntr) + "Y" + String(CLPlotVal) + "*");
 
       // run this loop only when page first opens
       //
@@ -2531,9 +2619,9 @@ void SendAppData()
 
         // Update cl level
         // text = "CLTimer";
-        Serial1.print("*I");
-        Serial1.print(CLPump_RunTime);
-        Serial1.print("*");
+        // Serial1.print("*I");
+        // Serial1.print(CLPump_RunTime);
+        // Serial1.print("*");
 
         // Update vol level
         // text = "AlarmVol";
@@ -2544,17 +2632,17 @@ void SendAppData()
         //  plot
 
         // Serial1.print("*V" + String(3000) + "," + String(3000) + "," + String(3000) + "," + String(3000));
-        // Serial1.print("*V" + String(Sensor_Level_Values.DepthMM) + "," + String(PumpPlotVal) + "," + String(AlarmPlotVal) + "," + String(CLPumpPlotVal));
+        // Serial1.print("*V" + String(Sensor_Level_Values.DepthMM) + "," + String(PumpPlotVal) + "," + String(AlarmPlotVal) + "," + String(CLPlotVal));
 
-        // Serial1.print("*V" + String(Sensor_Level_Values.DepthMM) + "," + String(PumpPlotVal) + "," + String(AlarmPlotVal) + "," + String(CLPumpPlotVal));
-        //      Serial1.print("*VX" + String(cntr) + "Y" + String(Sensor_Level_Values.DepthMM) + ",X" + String(cntr) + "Y" + String(PumpPlotVal) + ",X" + String(cntr) + "Y" + String(AlarmPlotVal) + ",X" + String(cntr) + "Y" + String(CLPumpPlotVal) + "*");
+        // Serial1.print("*V" + String(Sensor_Level_Values.DepthMM) + "," + String(PumpPlotVal) + "," + String(AlarmPlotVal) + "," + String(CLPlotVal));
+        //      Serial1.print("*VX" + String(cntr) + "Y" + String(Sensor_Level_Values.DepthMM) + ",X" + String(cntr) + "Y" + String(PumpPlotVal) + ",X" + String(cntr) + "Y" + String(AlarmPlotVal) + ",X" + String(cntr) + "Y" + String(CLPlotVal) + "*");
 
         PumpStatus = OFF;
         PumpManFlag = OFF;
         AlarmStatus = OFF;
         AlarmManFlag = OFF;
-        CLPumpStatus = OFF;
-        CLPumpManFlag = OFF;
+        // CLPumpStatus = OFF;
+        // CLPumpManFlag = OFF;
         Page1Once = 0;
         Page2Once = 1;
       }
@@ -2585,7 +2673,7 @@ void SendAppData()
 
         PumpManFl = OFF;
         AlarmManFl = OFF;
-        CLPumpManFl = OFF;
+        // CLPumpManFl = OFF;
         Page1Once = 1;
         Page2Once = 0;
       }
@@ -2608,12 +2696,12 @@ void SendAppData()
 
       PumpManFlag = PumpManFl;
       AlarmManFlag = AlarmManFl;
-      CLPumpManFlag = CLPumpManFl;
+      // CLPumpManFlag = CLPumpManFl;
       PumpOnLevel = PumpOnLevelSliderValue;
       PumpOffLevel = PumpOffLevelSliderValue;
       AlarmOnLevel = AlarmOnLevelSliderValue;
       AlarmOffLevel = AlarmOffLevelSliderValue;
-      CLPump_RunTime = CLTimerSliderValue;
+      // CLPump_RunTime = CLTimerSliderValue;
       AlarmVol = AlarmVolSliderValue;
 
       // Update pump on level
@@ -2642,9 +2730,9 @@ void SendAppData()
 
       // Update cl level
       // text = "CLTimer";
-      Serial1.print("*I");
-      Serial1.print(CLPump_RunTime);
-      Serial1.print("*");
+      // Serial1.print("*I");
+      // Serial1.print(CLPump_RunTime);
+      // Serial1.print("*");
 
       // Update vol level
       // text = "AlarmVol";
@@ -2712,7 +2800,7 @@ void SendAppData()
     Serial1.print("*");
 
     // CL LED Color
-    if (CLPumpStatus == ON)
+    if (StatusCLSensor == ON)
     { // <--- Set RGB color grn
       red = 0;
       green = 255;
@@ -2759,7 +2847,7 @@ void BuildPanel(void)
   // add_xy_graph(X,Y,Size,Min X,Max X,Min Y,Max Y,Points,Receive Char,[Title Text],[X-Axis Text],[Y-Axis Text Autoscale X, AutoScale Y, Log X, Log Y, GridLines X, Gridlines Y,Legend,MaxMin X,MaxMin Y, Line Size, Marker Size,Trace Count,Trace 1 Name, R, G, B, [Trace 2 Name, R, G, B,])
 
   //////////// static text
-  Serial1.println("add_text(15,1,medium,C,CL TIME,245,240,245,)");
+  // Serial1.println("add_text(15,1,medium,C,CL TIME,245,240,245,)");
   Serial1.println("add_text(15,2,small,C,SEC,245,240,245,)");
   Serial1.println("add_text(13,1,medium,L,LEVEL,245,240,245,)");
   Serial1.println("add_text(13,2,small,C,OFF,245,240,245,)");
@@ -2774,12 +2862,12 @@ void BuildPanel(void)
   Serial1.println("add_text(9,1,medium,R,PUMP,245,240,245,)");
   Serial1.println("add_text(17,2,small,C,%,245,240,245,)");
   Serial1.println("add_text(0,1,medium,C,PUMP,245,240,245,)");
-  Serial1.println("add_text(6,1,medium,C,CL,245,240,245,)");
+  // Serial1.println("add_text(6,1,medium,C,CL,245,240,245,)");
   Serial1.println("add_text(3,1,medium,C,ALARM,245,240,245,)");
   Serial1.println("add_text(4,0,large,C,STATUS,245,240,245,)");
   Serial1.println("add_text(7,2,medium,R,PUMP,245,240,245,)");
   Serial1.println("add_text(7,4,medium,L,ALARM,245,240,245,)");
-  Serial1.println("add_text(7,6,medium,L,CL,245,240,245,)");
+  // Serial1.println("add_text(7,6,medium,L,CL,245,240,245,)");
   Serial1.println("add_text(4,3,medium,C,AUTO,245,240,245,)");
   Serial1.println("add_text(4,7,medium,C,MANUAL,245,255,245,)");
   Serial1.println("add_text(0,4,medium,L,LEVEL,245,240,245,)");
@@ -2818,9 +2906,9 @@ void BuildPanel(void)
   Serial1.println(",245,240,245,H)");
 
   // Serial1.println("add_text(15,3,small,C,0,245,240,245,I)"); // cl time value
-  Serial1.print("add_text(15,3,small,C,");
-  Serial1.print(CLPump_RunTime);
-  Serial1.println(",245,240,245,I)");
+  // Serial1.print("add_text(15,3,small,C,");
+  // Serial1.print(CLPump_RunTime);
+  // Serial1.println(",245,240,245,I)");
 
   // Serial1.println("add_text(17,3,small,C,0,245,240,245,J)"); // vol value
   Serial1.print("add_text(17,3,small,C,");
@@ -2860,10 +2948,10 @@ void BuildPanel(void)
   Serial1.println(",Q,q,0)");
 
   // Serial1.println("add_slider(15,4,3,0,100,CLTimer,R,r,0)");  // cl time slider
-  Serial1.print("add_slider(15,4,3,0,60,");
-  int x = CLPump_RunTime;
-  Serial1.print(x);
-  Serial1.println(",R,r,0)");
+  // Serial1.print("add_slider(15,4,3,0,60,");
+  // int x = CLPump_RunTime;
+  // Serial1.print(x);
+  // Serial1.println(",R,r,0)");
 
   // Serial1.println("add_slider(17,4,3,0,100,AlarmVol,S,s,0)");  // vol slider */
   Serial1.print("add_slider(17,4,3,0,100,");
@@ -2876,7 +2964,7 @@ void BuildPanel(void)
   Serial1.println("set_grid_size(18,9)");
 
   //////////// static text
-  Serial1.println("add_text(15,1,medium,C,CL TIME,245,240,245,)");
+  // Serial1.println("add_text(15,1,medium,C,CL TIME,245,240,245,)");
   Serial1.println("add_text(15,2,small,C,SEC,245,240,245,)");
   Serial1.println("add_text(13,1,medium,L,LEVEL,245,240,245,)");
   Serial1.println("add_text(13,2,small,C,OFF,245,240,245,)");
@@ -2891,7 +2979,7 @@ void BuildPanel(void)
   Serial1.println("add_text(9,1,medium,R,PUMP,245,240,245,)");
   Serial1.println("add_text(17,2,small,C,%,245,240,245,)");
   Serial1.println("add_text(0,1,medium,C,PUMP,245,240,245,)");
-  Serial1.println("add_text(6,1,medium,C,CL,245,240,245,)");
+  // Serial1.println("add_text(6,1,medium,C,CL,245,240,245,)");
   Serial1.println("add_text(3,1,medium,C,ALARM,245,240,245,)");
   Serial1.println("add_text(4,0,large,C,STATUS,245,240,245,)");
   // Serial1.println("add_text(7,3,medium,R,PUMP,245,240,245,)");
@@ -2931,9 +3019,9 @@ void BuildPanel(void)
   Serial1.println(",245,240,245,H)");
 
   // Serial1.println("add_text(15,3,small,C,0,245,240,245,I)"); // cl time value
-  Serial1.print("add_text(15,3,small,C,");
-  Serial1.print(CLPump_RunTime);
-  Serial1.println(",245,240,245,I)");
+  // Serial1.print("add_text(15,3,small,C,");
+  // Serial1.print(CLPump_RunTime);
+  // Serial1.println(",245,240,245,I)");
 
   // Serial1.println("add_text(17,3,small,C,0,245,240,245,J)"); // vol value
   Serial1.print("add_text(17,3,small,C,");
@@ -2952,7 +3040,7 @@ void BuildPanel(void)
 
   // plot graph
   // Serial1.println("add_roll_graph(9,4,8,0.0,3000.0,1000,V,Last 30 Days,Time,Value,1,0,1,1,1,1,thin,none,4,Level,70,255,255,Pump,255,145,0,Alarm,255,255,0,CLPmp,220,180,225)");
-  Serial1.println("add_xy_graph(9,4,8,0.0,1000.0,0.0,3000.0,1000,V,Usage,Time,Value,0,0,0,0,1,1,1,1,1,medium,small,4,Level,70,255,255,Pump,255,145,0,Alarm,255,255,0,CLPmp,220,180,225)");
+  Serial1.println("add_xy_graph(9,4,8,0.0,1000.0,0.0,3000.0,1000,V,Usage,Time,Value,0,0,0,0,1,1,1,1,1,medium,small,4,Level,70,255,255,Pump,255,145,0,Alarm,255,255,0)"); //,CLPmp,220,180,225)");
 
   Serial1.println("run()");
   Serial1.println("*");
@@ -3000,16 +3088,16 @@ void SD_Update()
       AlarmPlotVal = 0;
     }
 
-    if (CLPumpStatus)
+    if (StatusLevelSensor)
     {
-      CLPumpPlotVal = 250;
+      CLPlotVal = 250;
     }
     else
     {
-      CLPumpPlotVal = 0;
+      CLPlotVal = 0;
     }
     // Refresh_SD(&RTCClock, &Sensor_Env_Values, &Sensor_Level_Values, Count);
-    Refresh_SD(&RTClock, &Sensor_Level_Values, Count, PumpPlotVal, AlarmPlotVal, CLPumpPlotVal);
+    Refresh_SD(&RTClock, &Sensor_Level_Values, Count, PumpPlotVal, AlarmPlotVal, CLPlotVal);
   }
 
   /*   Serial.print(RTCClock.year(), DEC);
@@ -3066,7 +3154,7 @@ void WriteData()
   Settings.putInt("PumpOffLevel", PumpOffLevel);
   Settings.putInt("AlarmOnLevel", AlarmOnLevel);
   Settings.putInt("AlarmOffLevel", AlarmOffLevel);
-  Settings.putInt("CLTimer", CLPump_RunTime);
+  // Settings.putInt("CLTimer", CLPump_RunTime);
   Settings.putInt("AlarmVol", AlarmVol);
   Settings.end(); // close the namespace
 }

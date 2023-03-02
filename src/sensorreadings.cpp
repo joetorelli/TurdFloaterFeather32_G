@@ -6,6 +6,18 @@
 
 // //#include "mqttController.h"
 
+bool ReadCLSensor(int PIN)
+{
+    if (digitalRead(PIN) == HIGH)
+    {
+        return false; // no mag
+    }
+    else
+    {
+        return true; // magnet detected
+    }
+}
+
 /* void ReadSwitches(Select_SW *SwState) // Adafruit_SSD1306 *OLED_Display)
 {
     int SSWAutoPin = 4;   // auto/man pos  BUTTON_A
@@ -60,9 +72,9 @@ int ReadAirPump(Adafruit_MPRLS *AirSen, AirSensor *AirSenVal)
     AirSenVal->pressure_hPa = AirSen->readPressure();
     AirSenVal->pressure_PSI = AirSenVal->pressure_hPa / 68.947572932;
     // Serial.print("Pressure (hPa): ");
-    //Serial.println(AirSenVal->pressure_hPa);
+    // Serial.println(AirSenVal->pressure_hPa);
     // Serial.print("Pressure (PSI): ");
-    //Serial.println(AirSenVal->pressure_PSI);
+    // Serial.println(AirSenVal->pressure_PSI);
     Reading = AirSenVal->pressure_hPa;
 
     if (isnan(AirSenVal->pressure_hPa)) // not found

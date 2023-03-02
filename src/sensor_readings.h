@@ -53,6 +53,7 @@ struct AirSensor
 
 int ReadLevelSensor(SDL_Arduino_INA3221 *LevSensor, LevelSensor *SensorLevelVal, int CNum);
 int ReadAirPump(Adafruit_MPRLS *AirSen, AirSensor *AirSenVal);
+bool ReadCLSensor(int PIN);
 double mapf(double var, double InMin, double InMax, double OutMin, double OutMax);
 
 #endif
