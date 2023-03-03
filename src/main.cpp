@@ -303,6 +303,7 @@ Ticker APPTimer;        // how often to Update BT App
 Ticker SensorTimer;     // how often to Read Sensor
 Ticker DisPlayTimer;    // how often to update OLED
 Ticker DisplayOffTimer; // when to blank display
+Ticker ReadWaterSWTimer;
 // Ticker CLPumpTimer;     // how long to run CLPump
 
 //// timer intervals
@@ -1208,8 +1209,8 @@ void loop()
     }
 
     // sensor cl level read
-    StatusWaterFlowSensor = ReadWaterFlowSensor(WaterFlowSW);
-    Serial.println("WaterFlowSensorUpdate");
+    // StatusWaterFlowSensor = ReadWaterFlowSensor(WaterFlowSW);
+    // Serial.println("WaterFlowSensorUpdate");
     // Serial.printf("Status Air Sensor: %d", StatusAirSensor);
     //  if bad reading run fault display
     //   if (StatusWaterFlowSensor == ON) // flow detected
@@ -2540,6 +2541,7 @@ void Alarm(void)
 // Pump Control
 void Pump(void)
 {
+
   if (AutoManControl == ON) // auto
   {
     if (Sensor_Level_Values.DepthMM >= PumpOnLevel)
@@ -2549,12 +2551,20 @@ void Pump(void)
       // Serial.println(" AutoPumpStatusON ");
       //  DEBUGPRINTLN(PumpStatus);
       // CLPumpRunOnce = ON;
+       delay(500);
+       StatusWaterFlowSensor = ReadWaterFlowSensor(WaterFlowSW);
+      // if (StatusWaterFlowSensor == OFF)
+      // {
+      //   TestWaterFlowSensor();
+      // }
     }
 
     if (Sensor_Level_Values.DepthMM <= PumpOffLevel)
     {
       digitalWrite(PumpPin, OFF);
       PumpStatus = OFF;
+      //      delay(500);
+      StatusWaterFlowSensor = ReadWaterFlowSensor(WaterFlowSW);
       // DEBUGPRINT(" AutoPumpStatusOFF ");
       //  DEBUGPRINTLN(PumpStatus);
     }
@@ -2568,14 +2578,37 @@ void Pump(void)
       PumpStatus = ON;
       // Serial.println("ManPumpStatusON ");
       //   DEBUGPRINTLN(PumpStatus);
+      delay(500);
+      StatusWaterFlowSensor = ReadWaterFlowSensor(WaterFlowSW);
+      // if (StatusWaterFlowSensor == OFF)
+      // {
+      //   TestWaterFlowSensor();
+      // }
     }
     else
     {
       digitalWrite(PumpPin, OFF);
       PumpStatus = OFF;
       // Serial.println("ManPumpStatusOFF ");
+
       //   DEBUGPRINTLN(PumpStatus);
+      //delay(500);
+      StatusWaterFlowSensor = ReadWaterFlowSensor(WaterFlowSW);
+      // if (StatusWaterFlowSensor == ON)
+      // {
+      //   TestWaterFlowSensor();
+      // }
     }
+  }
+
+  if (PumpStatus == ON && StatusWaterFlowSensor == OFF)
+  {
+      TestWaterFlowSensor();
+  }
+  if (PumpStatus == OFF && StatusWaterFlowSensor == ON)
+
+  {
+    TestWaterFlowSensor();
   }
 }
 
