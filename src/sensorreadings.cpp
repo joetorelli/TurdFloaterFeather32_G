@@ -5,6 +5,17 @@
 #include "OLED.h"
 
 // //#include "mqttController.h"
+bool ReadWaterFlowSensor(int PIN)
+{
+    if (digitalRead(PIN) == HIGH)
+    {
+        return false; // no flow
+    }
+    else
+    {
+        return true; // flow
+    }
+}
 
 bool ReadCLSensor(int PIN)
 {

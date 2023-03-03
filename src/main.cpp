@@ -77,18 +77,18 @@
               done - working, need to add mprls pressure sensor to read air pump, menu's good
               done - add mag sw to check for CL tablet level and not use cl pump
                       need to check BT because removed CL Pump
-
+              done - add water flow sw/cl sw status to off menu
 
               inwork -
+
+                  add air flow read/setting to pump menu
+
                   splitting files
                   menu system setup
 
 
-                  looking into web page, will move to esp32v2
-
-
-
               open -
+                  looking into web page, will move to esp32v2
                   add alarm if not in auto after some time
 
                   Connect to ESPHome
@@ -137,15 +137,18 @@
                               19 MISO
                               33 SD_CS
               Inputs -
-                              34 SensorPin analog
-                              15,32,14,21 rotory select sw
-                              4 encoder sw
-                                enca, encb
+                              //34 SensorPin analog
+                              26,25,34,39  rotory select sw             //15,32,14,21
+                              14 encoder sw
+                              15,32 enca, encb
                               36 blue tooth connect from bt board
+                              21 cl switch
+                              4 waterflow
+
               Outputs -
                               12 AlarmPin
                               13 PumpPin
-                              27 CL Pump    // currently being used for toggle pin during SD_Update
+                              //27 CL Pump    // currently being used for toggle pin during SD_Update
               Bluetooth -
                               17 tx
                               16 rx
@@ -222,6 +225,7 @@
 #define SWEncoderPin 14 // enc push button
 
 #define CLLevelSW 21
+#define WaterFlowSW 4
 
 // Rotary Encoder
 #define ROTARY_ENCODER_A_PIN 32
@@ -445,7 +449,8 @@ void pressed(Button2 &btn); // when button/sw pressed
 Adafruit_MPRLS AirFlowSensor = Adafruit_MPRLS(RESET_PIN, EOC_PIN);
 struct AirSensor AirPump;
 int StatusAirSensor = 0;
-bool StatusCLSensor = false;
+bool StatusCLSensor = OFF;
+bool StatusWaterFlowSensor = OFF;
 /****************************  menu code  ***************************/
 menuFrame AlarmMenu; // runs when SSW in Alarm Position
 menuFrame PumpMenu;  // runs when SSW in Pump Position
@@ -457,6 +462,7 @@ void TestLevelSensor();
 void TestAirSensor();
 void TestCLSensor();
 void TestPwrSupply();
+void TestWaterFlowSensor();
 void PumpOnAdjust();
 void PumpOffAdjust();
 void AlarmOnAdjust();
@@ -502,6 +508,9 @@ void setup()
 
   // CL Mag SW
   pinMode(CLLevelSW, INPUT);
+
+  // Water Flow SW
+  pinMode(WaterFlowSW, INPUT_PULLUP);
 
   //// turn off outputs
   digitalWrite(AlarmPin, OFF);
@@ -985,6 +994,7 @@ void setup()
   TestMenu.addNode("LvlSensor", ACT_NODE, &TestLevelSensor);
   TestMenu.addNode("AirSensor", ACT_NODE, &TestAirSensor);
   TestMenu.addNode("CLSensor", ACT_NODE, &TestCLSensor);
+  TestMenu.addNode("FlowSensor", ACT_NODE, &TestWaterFlowSensor);
 
   OLED_Display.setTextColor(SSD1327_WHITE);
 
@@ -1008,6 +1018,11 @@ void setup()
   TestMenu.nodeIndex = 3;
   TestMenu.build(&OLED_Display);
   TestMenu.choose(); // test cl sensor
+  delay(1000);
+
+  TestMenu.nodeIndex = 4;
+  TestMenu.build(&OLED_Display);
+  TestMenu.choose(); // test water flow sensor
   delay(1000);
 
   OLED_Display.clearDisplay();
@@ -1185,9 +1200,23 @@ void loop()
     //  if bad reading run fault display
     if (StatusCLSensor == ON) // mag detected
     {
-      TestPwrSupply();
-      TestCLSensor();
+      if (!OffPositionFlag)
+      {
+        TestPwrSupply();
+        TestCLSensor();
+      }
     }
+
+    // sensor cl level read
+    StatusWaterFlowSensor = ReadWaterFlowSensor(WaterFlowSW);
+    Serial.println("WaterFlowSensorUpdate");
+    // Serial.printf("Status Air Sensor: %d", StatusAirSensor);
+    //  if bad reading run fault display
+    //   if (StatusWaterFlowSensor == ON) // flow detected
+    //   {
+    // TestPwrSupply();
+    // TestWaterFlowSensor();
+    //   }
 
     SensorReadFlag = OFF;
   }
@@ -1614,6 +1643,8 @@ void TestPwrSupply()
   /*************************************************************************/
   int PSType = 0;
   Type = "12v";
+  TestMenu.nodeIndex = 0;
+  TestMenu.build(&OLED_Display);
   OLED_Display.setTextSize(1);
   OLED_Display.println("Testing...");
   OLED_Display.display();
@@ -1951,9 +1982,65 @@ void TestAirSensor()
   // OLED_Display.display();
 }
 
+void TestWaterFlowSensor()
+{
+  TestMenu.nodeIndex = 4;
+  TestMenu.build(&OLED_Display);
+  OLED_Display.setTextSize(1);
+  OLED_Display.println("Testing...");
+  OLED_Display.display();
+
+  for (int i = 0; i <= 6; i++)
+  {
+    // sensor cl read
+    StatusWaterFlowSensor = ReadWaterFlowSensor(WaterFlowSW);
+    delay(100);
+  }
+
+  if (StatusWaterFlowSensor == ON) // mag detected
+  {
+
+    OLED_Display.setTextSize(2);
+    OLED_Display.println("SW CLOSD");
+
+    OLED_Display.setTextSize(1);
+    OLED_Display.println("");
+    OLED_Display.println("Sensor Reading");
+    OLED_Display.println("");
+    OLED_Display.println("LOW Level");
+    OLED_Display.println("");
+    OLED_Display.println("Flow Detected");
+
+    OLED_Display.display();
+
+    // AlarmToggle();
+    // delay(5000);
+    // AlarmToggle();
+    delay(1000);
+  }
+
+  else
+  {
+
+    TestMenu.nodeIndex = 4;
+    TestMenu.build(&OLED_Display);
+    OLED_Display.setTextSize(2);
+    OLED_Display.println("SW OPEN");
+    OLED_Display.setTextSize(1);
+    OLED_Display.println("Sensor Reading");
+    OLED_Display.println("HIGH Level");
+    OLED_Display.print("NO Flow");
+
+    OLED_Display.display();
+
+    delay(1000);
+  }
+}
+
 void TestCLSensor()
 {
-
+  TestMenu.nodeIndex = 3;
+  TestMenu.build(&OLED_Display);
   OLED_Display.setTextSize(1);
   OLED_Display.println("Testing...");
   OLED_Display.display();
@@ -2158,6 +2245,8 @@ void DisplayUpdate(void)
         OLED_Display.printf("Alarm Level Off: %d\r\n\n", AlarmOffLevel);
         OLED_Display.printf("Pump Level On:   %d\r\n\n", PumpOnLevel);
         OLED_Display.printf("Pump Level Off:  %d\r\n\n", PumpOffLevel);
+        OLED_Display.printf("CL Switch:   %d\r\n\n", StatusCLSensor);
+        OLED_Display.printf("Flow Switch:  %d\r", StatusWaterFlowSensor);
         // OLED_Display.printf("CL Time:         %d\r\n\n", CLPRT);
 
         OLED_Display.display();
