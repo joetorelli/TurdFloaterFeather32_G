@@ -248,11 +248,11 @@ int PumpOffLevel = 0;  // value for PumpOffLevel
 int AlarmVol = 0;
 
 // status flags
-byte PumpStatus = OFF;    // Pump On/Off
-byte PumpManFlag = OFF;   // pump sw state
-byte AlarmStatus = OFF;   // Alarm On/Off
-byte AlarmManFlag = OFF;  // Alarm sw state
-byte AutoManControl = ON; // auto/manual sw state
+byte StatusWaterPump = OFF; // Pump On/Off
+byte PumpManFlag = OFF;     // pump sw state
+byte StatusAlarm = OFF;     // Alarm On/Off
+byte AlarmManFlag = OFF;    // Alarm sw state
+byte AutoManControl = ON;   // auto/manual sw state
 // byte CLPumpStatus = OFF;  // CLPump On/Off
 // byte CLPumpManFlag = OFF; // CLpump sw state
 // byte CLPumpRunOnce = OFF; // run CLPump after Pump stops
@@ -1179,8 +1179,11 @@ void loop()
     // if bad reading run fault display
     if (StatusLevelSensor != 0)
     {
-      TestPwrSupply();
-      TestLevelSensor();
+      if (AutoPositionFlag) // run test in auto only
+      {
+        TestPwrSupply();
+        TestLevelSensor();
+      }
     }
 
     // sensor air read
@@ -1190,34 +1193,51 @@ void loop()
     //  if bad reading run fault display
     if (StatusAirSensor != 0)
     {
-      TestPwrSupply();
-      TestAirSensor();
+      if (AutoPositionFlag) // run test in auto only
+      {
+        TestPwrSupply();
+        TestAirSensor();
+      }
     }
 
     // sensor cl level read
     StatusCLSensor = ReadCLSensor(CLLevelSW);
     Serial.println("CLSensorUpdate");
-    // Serial.printf("Status Air Sensor: %d", StatusAirSensor);
+    // Serial.printf("Status CL Sensor: %d", StatusCLSensor);
     //  if bad reading run fault display
     if (StatusCLSensor == ON) // mag detected
     {
-      if (!OffPositionFlag)
+      if (AutoPositionFlag) // run test in auto only
       {
         TestPwrSupply();
         TestCLSensor();
       }
     }
 
-    // sensor cl level read
-    // StatusWaterFlowSensor = ReadWaterFlowSensor(WaterFlowSW);
-    // Serial.println("WaterFlowSensorUpdate");
-    // Serial.printf("Status Air Sensor: %d", StatusAirSensor);
+    // sensor water level read
+    StatusWaterFlowSensor = ReadWaterFlowSensor(WaterFlowSW);
+    Serial.println("FLOWSensorUpdate");
+    Serial.printf("Pump: %d, Water: %d\n", StatusWaterPump, StatusWaterFlowSensor);
     //  if bad reading run fault display
-    //   if (StatusWaterFlowSensor == ON) // flow detected
-    //   {
-    // TestPwrSupply();
-    // TestWaterFlowSensor();
-    //   }
+    if (StatusWaterPump == ON && StatusWaterFlowSensor == OFF)
+    {
+      if (AutoPositionFlag == ON) // run test in auto/pump only
+      {
+        TestWaterFlowSensor();
+        // Serial.println("StatusWaterPump == ON && StatusWaterFlowSensor == OFF");
+        // delay(1000);
+      }
+    }
+
+    if (StatusWaterPump == OFF && StatusWaterFlowSensor == ON)
+    {
+      if (AutoPositionFlag == ON) // run test in auto/pump only
+      {
+        TestWaterFlowSensor();
+        // Serial.println("StatusWaterPump == OFF && StatusWaterFlowSensor == ON");
+        // delay(1000);
+      }
+    }
 
     SensorReadFlag = OFF;
   }
@@ -1614,6 +1634,146 @@ void AlarmToggle()
   digitalWrite(AlarmPin, AlarmManFlag);
 }
 
+// Alaram Control
+void Alarm(void)
+{
+  if (AutoManControl == ON)
+  {
+    if (Sensor_Level_Values.DepthMM >= AlarmOnLevel)
+    {
+      digitalWrite(AlarmPin, ON);
+      StatusAlarm = ON;
+      // DEBUGPRINT(" AutoAlarmStatusON ");
+      // DEBUGPRINTLN(StatusAlarm);
+    }
+
+    if (Sensor_Level_Values.DepthMM <= AlarmOffLevel)
+    {
+      digitalWrite(AlarmPin, OFF);
+      StatusAlarm = OFF;
+      // DEBUGPRINT(" AutoAlarmStatusOFF ");
+      // DEBUGPRINTLN(StatusAlarm);
+    }
+  }
+  else // manual control
+  {
+    /*     if (AlarmManFlag == ON)
+        {
+          digitalWrite(AlarmPin, ON);
+          StatusAlarm = ON;
+          // DEBUGPRINT(" ManAlarmStatusON ");
+          //   DEBUGPRINTLN(StatusAlarm);
+        }
+        else
+        {
+          digitalWrite(AlarmPin, OFF);
+          StatusAlarm = OFF;
+          // DEBUGPRINT(" ManAlarmStatusOFF ");
+          //   DEBUGPRINTLN(StatusAlarm);
+        } */
+  }
+}
+
+// Pump Control
+void Pump(void)
+{
+
+  if (AutoManControl == ON) // auto
+  {
+    if (Sensor_Level_Values.DepthMM >= PumpOnLevel)
+    {
+      digitalWrite(PumpPin, ON);
+      StatusWaterPump = ON;
+      // Serial.println(" AutoPumpStatusON ");
+      //  DEBUGPRINTLN(StatusWaterPump);
+      // CLPumpRunOnce = ON;
+      // delay(500);
+      // StatusWaterFlowSensor = ReadWaterFlowSensor(WaterFlowSW);
+      // if (StatusWaterFlowSensor == OFF)
+      // {
+      //   TestWaterFlowSensor();
+      // }
+    }
+
+    if (Sensor_Level_Values.DepthMM <= PumpOffLevel)
+    {
+      digitalWrite(PumpPin, OFF);
+      StatusWaterPump = OFF;
+      // //      delay(500);
+      // StatusWaterFlowSensor = ReadWaterFlowSensor(WaterFlowSW);
+      // DEBUGPRINT(" AutoPumpStatusOFF ");
+      //  DEBUGPRINTLN(StatusWaterPump);
+    }
+  }
+  else // manual control
+  {    ///////////////////////////////////////////////////// maybe changes this to PumpToggle
+
+    if (PumpManFlag == ON)
+    {
+      digitalWrite(PumpPin, ON);
+      StatusWaterPump = ON;
+      // Serial.println("ManPumpStatusON ");
+      //   DEBUGPRINTLN(StatusWaterPump);
+      // delay(500);
+      // StatusWaterFlowSensor = ReadWaterFlowSensor(WaterFlowSW);
+      // if (StatusWaterFlowSensor == OFF)
+      // {
+      //   TestWaterFlowSensor();
+      // }
+    }
+    else
+    {
+      digitalWrite(PumpPin, OFF);
+      StatusWaterPump = OFF;
+      // Serial.println("ManPumpStatusOFF ");
+
+      //   DEBUGPRINTLN(StatusWaterPump);
+      // delay(500);
+      // StatusWaterFlowSensor = ReadWaterFlowSensor(WaterFlowSW);
+      // if (StatusWaterFlowSensor == ON)
+      // {
+      //   TestWaterFlowSensor();
+      // }
+    }
+  }
+}
+
+// CLPump Control
+/* void CLPump(void)
+{
+  if (AutoManControl == ON) // auto
+  {
+
+    if (CLPumpRunOnce == ON && StatusWaterPump == OFF)
+    {
+
+      delay(500);
+      digitalWrite(CLPumpPin, ON);
+      DEBUGPRINTLN("CLPump ON Auto");
+      CLPumpStatus = ON;
+      CLPumpRunOnce = OFF; // set in pump()
+      CLPumpTimer.once(CLPump_RunTime, CLPumpOFF);
+    }
+  }
+  else // manual control
+  {
+    if (CLPumpManFlag == ON)
+    {
+      digitalWrite(CLPumpPin, ON);
+      CLPumpStatus = ON;
+      // DEBUGPRINT("CLPumpStatusON Man ");
+      //  DEBUGPRINTLN(CLPumpStatus);
+    }
+    else
+    {
+      digitalWrite(CLPumpPin, OFF);
+      CLPumpStatus = OFF;
+      // DEBUGPRINT("CLPumpStatusOFF Man ");
+      //  DEBUGPRINTLN(CLPumpStatus);
+    }
+  }
+} */
+
 // blank
 void testFunct()
 {
@@ -1646,9 +1806,11 @@ void TestPwrSupply()
   Type = "12v";
   TestMenu.nodeIndex = 0;
   TestMenu.build(&OLED_Display);
+
   OLED_Display.setTextSize(1);
   OLED_Display.println("Testing...");
   OLED_Display.display();
+
   for (int i = 0; i <= 6; i++)
   {
 
@@ -1777,6 +1939,7 @@ void TestLevelSensor()
   OLED_Display.setTextSize(1);
   OLED_Display.println("Testing...");
   OLED_Display.display();
+
   for (int i = 0; i <= 6; i++)
   {
     StatusLevelSensor = ReadLevelSensor(&ina3221, &Sensor_Level_Values, Chan2);
@@ -1792,7 +1955,8 @@ void TestLevelSensor()
     // OLED_Display.printf("Current: %f.1\n\r", Sensor_Level_Values.ShuntImA);
     TestMenu.nodeIndex = 1;
     TestMenu.build(&OLED_Display);
-    OLED_Display.println("");
+
+    // OLED_Display.println("");
     OLED_Display.setTextSize(2);
     OLED_Display.println("Passed");
     OLED_Display.setTextSize(1);
@@ -1881,6 +2045,7 @@ void TestAirSensor()
   OLED_Display.setTextSize(1);
   OLED_Display.println("Testing...");
   OLED_Display.display();
+
   for (int i = 0; i <= 6; i++)
   {
     // sensor air read
@@ -1987,6 +2152,7 @@ void TestWaterFlowSensor()
 {
   TestMenu.nodeIndex = 4;
   TestMenu.build(&OLED_Display);
+
   OLED_Display.setTextSize(1);
   OLED_Display.println("Testing...");
   OLED_Display.display();
@@ -1998,11 +2164,11 @@ void TestWaterFlowSensor()
     delay(100);
   }
 
-  if (StatusWaterFlowSensor == ON) // mag detected
+  if (StatusWaterFlowSensor == ON) // flow detected
   {
 
     OLED_Display.setTextSize(2);
-    OLED_Display.println("SW CLOSD");
+    OLED_Display.println("SW CLOSED");
 
     OLED_Display.setTextSize(1);
     OLED_Display.println("");
@@ -2025,6 +2191,7 @@ void TestWaterFlowSensor()
 
     TestMenu.nodeIndex = 4;
     TestMenu.build(&OLED_Display);
+
     OLED_Display.setTextSize(2);
     OLED_Display.println("SW OPEN");
     OLED_Display.setTextSize(1);
@@ -2155,7 +2322,7 @@ void DisplayOn(void)
   CLPumpStatus = OFF;
 } */
 
-// set flag
+// set flag to send data to app
 void DisplayUpdateSetFlag(void)
 {
   /* don't want to spend much time in callback
@@ -2177,9 +2344,9 @@ void DisplayUpdate(void)
 
     DisplayLevelSensor(&OLED_Display, &Sensor_Level_Values);
 
-    OLED_Display.printf("Pump: %d\n", PumpStatus);
+    OLED_Display.printf("Pump: %d\n", StatusWaterPump);
     OLED_Display.printf(" On: %d Off: %d\n", PumpOnLevel, PumpOffLevel);
-    OLED_Display.printf("Alarm: %d\n", AlarmStatus);
+    OLED_Display.printf("Alarm: %d\n", StatusAlarm);
     OLED_Display.printf(" On: %d Off: %d\n", AlarmOnLevel, AlarmOffLevel);
     // OLED_Display.printf("CLPmp: %d\n", CLPumpStatus);
 
@@ -2498,156 +2665,6 @@ void pressed(Button2 &btn)
   }
 }
 
-// Alaram Control
-void Alarm(void)
-{
-  if (AutoManControl == ON)
-  {
-    if (Sensor_Level_Values.DepthMM >= AlarmOnLevel)
-    {
-      digitalWrite(AlarmPin, ON);
-      AlarmStatus = ON;
-      // DEBUGPRINT(" AutoAlarmStatusON ");
-      // DEBUGPRINTLN(AlarmStatus);
-    }
-
-    if (Sensor_Level_Values.DepthMM <= AlarmOffLevel)
-    {
-      digitalWrite(AlarmPin, OFF);
-      AlarmStatus = OFF;
-      // DEBUGPRINT(" AutoAlarmStatusOFF ");
-      // DEBUGPRINTLN(AlarmStatus);
-    }
-  }
-  else // manual control
-  {
-    /*     if (AlarmManFlag == ON)
-        {
-          digitalWrite(AlarmPin, ON);
-          AlarmStatus = ON;
-          // DEBUGPRINT(" ManAlarmStatusON ");
-          //   DEBUGPRINTLN(AlarmStatus);
-        }
-        else
-        {
-          digitalWrite(AlarmPin, OFF);
-          AlarmStatus = OFF;
-          // DEBUGPRINT(" ManAlarmStatusOFF ");
-          //   DEBUGPRINTLN(AlarmStatus);
-        } */
-  }
-}
-
-// Pump Control
-void Pump(void)
-{
-
-  if (AutoManControl == ON) // auto
-  {
-    if (Sensor_Level_Values.DepthMM >= PumpOnLevel)
-    {
-      digitalWrite(PumpPin, ON);
-      PumpStatus = ON;
-      // Serial.println(" AutoPumpStatusON ");
-      //  DEBUGPRINTLN(PumpStatus);
-      // CLPumpRunOnce = ON;
-       delay(500);
-       StatusWaterFlowSensor = ReadWaterFlowSensor(WaterFlowSW);
-      // if (StatusWaterFlowSensor == OFF)
-      // {
-      //   TestWaterFlowSensor();
-      // }
-    }
-
-    if (Sensor_Level_Values.DepthMM <= PumpOffLevel)
-    {
-      digitalWrite(PumpPin, OFF);
-      PumpStatus = OFF;
-      //      delay(500);
-      StatusWaterFlowSensor = ReadWaterFlowSensor(WaterFlowSW);
-      // DEBUGPRINT(" AutoPumpStatusOFF ");
-      //  DEBUGPRINTLN(PumpStatus);
-    }
-  }
-  else // manual control
-  {    ///////////////////////////////////////////////////// maybe changes this to PumpToggle
-
-    if (PumpManFlag == ON)
-    {
-      digitalWrite(PumpPin, ON);
-      PumpStatus = ON;
-      // Serial.println("ManPumpStatusON ");
-      //   DEBUGPRINTLN(PumpStatus);
-      delay(500);
-      StatusWaterFlowSensor = ReadWaterFlowSensor(WaterFlowSW);
-      // if (StatusWaterFlowSensor == OFF)
-      // {
-      //   TestWaterFlowSensor();
-      // }
-    }
-    else
-    {
-      digitalWrite(PumpPin, OFF);
-      PumpStatus = OFF;
-      // Serial.println("ManPumpStatusOFF ");
-
-      //   DEBUGPRINTLN(PumpStatus);
-      //delay(500);
-      StatusWaterFlowSensor = ReadWaterFlowSensor(WaterFlowSW);
-      // if (StatusWaterFlowSensor == ON)
-      // {
-      //   TestWaterFlowSensor();
-      // }
-    }
-  }
-
-  if (PumpStatus == ON && StatusWaterFlowSensor == OFF)
-  {
-      TestWaterFlowSensor();
-  }
-  if (PumpStatus == OFF && StatusWaterFlowSensor == ON)
-
-  {
-    TestWaterFlowSensor();
-  }
-}
-
-// CLPump Control
-/* void CLPump(void)
-{
-  if (AutoManControl == ON) // auto
-  {
-
-    if (CLPumpRunOnce == ON && PumpStatus == OFF)
-    {
-
-      delay(500);
-      digitalWrite(CLPumpPin, ON);
-      DEBUGPRINTLN("CLPump ON Auto");
-      CLPumpStatus = ON;
-      CLPumpRunOnce = OFF; // set in pump()
-      CLPumpTimer.once(CLPump_RunTime, CLPumpOFF);
-    }
-  }
-  else // manual control
-  {
-    if (CLPumpManFlag == ON)
-    {
-      digitalWrite(CLPumpPin, ON);
-      CLPumpStatus = ON;
-      // DEBUGPRINT("CLPumpStatusON Man ");
-      //  DEBUGPRINTLN(CLPumpStatus);
-    }
-    else
-    {
-      digitalWrite(CLPumpPin, OFF);
-      CLPumpStatus = OFF;
-      // DEBUGPRINT("CLPumpStatusOFF Man ");
-      //  DEBUGPRINTLN(CLPumpStatus);
-    }
-  }
-} */
-
 void SendAppDataSetFlag()
 {
 
@@ -2668,7 +2685,7 @@ void SendAppData()
     {
       // give a digital representation on plot
       static int cntr = 0;
-      if (PumpStatus)
+      if (StatusWaterPump)
       {
         PumpPlotVal = 750;
       }
@@ -2676,7 +2693,7 @@ void SendAppData()
       {
         PumpPlotVal = 0;
       }
-      if (AlarmStatus)
+      if (StatusAlarm)
       {
         AlarmPlotVal = 500;
       }
@@ -2759,9 +2776,9 @@ void SendAppData()
         // Serial1.print("*V" + String(Sensor_Level_Values.DepthMM) + "," + String(PumpPlotVal) + "," + String(AlarmPlotVal) + "," + String(CLPlotVal));
         //      Serial1.print("*VX" + String(cntr) + "Y" + String(Sensor_Level_Values.DepthMM) + ",X" + String(cntr) + "Y" + String(PumpPlotVal) + ",X" + String(cntr) + "Y" + String(AlarmPlotVal) + ",X" + String(cntr) + "Y" + String(CLPlotVal) + "*");
 
-        PumpStatus = OFF;
+        StatusWaterPump = OFF;
         PumpManFlag = OFF;
-        AlarmStatus = OFF;
+        StatusAlarm = OFF;
         AlarmManFlag = OFF;
         // CLPumpStatus = OFF;
         // CLPumpManFlag = OFF;
@@ -2876,7 +2893,7 @@ void SendAppData()
     Serial1.print("*");
 
     // Alarm LED Color
-    if (AlarmStatus == ON)
+    if (StatusAlarm == ON)
     { // <--- Set RGB color red
       red = 255;
       green = 0;
@@ -2899,7 +2916,7 @@ void SendAppData()
     Serial1.print("*");
 
     // Pump LED Color
-    if (PumpStatus == ON)
+    if (StatusWaterPump == ON)
     { // <--- Set RGB color grn
       red = 0;
       green = 255;
@@ -3174,10 +3191,6 @@ void SensorReadSetFlag()
   SensorReadFlag = ON;
 }
 
-// get sensor value
-
-// ReadLevelSensor(&ina3221, &Sensor_Level_Values, SensorChannel);
-
 void SD_UpdateSetFlag()
 {
 
@@ -3193,7 +3206,7 @@ void SD_Update()
     DEBUGPRINTLN("Write SD**************");
     DateTime RTClock = rtc.now();
     Count++;
-    if (PumpStatus)
+    if (StatusWaterPump)
     {
       PumpPlotVal = 750;
     }
@@ -3201,7 +3214,7 @@ void SD_Update()
     {
       PumpPlotVal = 0;
     }
-    if (AlarmStatus)
+    if (StatusAlarm)
     {
       AlarmPlotVal = 500;
     }
