@@ -80,20 +80,29 @@
               done - add water flow sw/cl sw status to off menu
 
               inwork -
-
+                  add alarm flags and alarm timer beep
                   add air flow read/setting to pump menu
 
                   splitting files
+                    HMI = OLED, LEDs
+                    Actuator = Pump, Alarm
+                    Menu = menusystem
+                    Sensor = Water,Air Press, CL
+                    INA3221 = Lib
+                    Switches = SSW control
+                    BlueTooth = BT COntrol, Screens
+                    WIFICont = WIFI Control, WEB Pages
+
                   menu system setup
 
 
               open -
+                  add air pressure level adj to warning trigger
                   looking into web page, will move to esp32v2
                   add alarm if not in auto after some time
 
                   Connect to ESPHome
                   Vol adj to PWM for alarm works on screen
-
 
 
               I2C Adr
@@ -1169,7 +1178,7 @@ void loop()
     Serial.println("SD_Update");
   }
 
-  // Update Sensor *********/
+  // Update level Sensor *********/
   // called from timer->SensorReadSetFlag->SensorReadFlag=ON
   if (SensorReadFlag == ON)
   {
