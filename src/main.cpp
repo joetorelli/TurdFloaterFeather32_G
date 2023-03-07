@@ -1227,6 +1227,7 @@ void loop()
     StatusWaterFlowSensor = ReadWaterFlowSensor(WaterFlowSW);
     Serial.println("FLOWSensorUpdate");
     Serial.printf("Pump: %d, Water: %d\n", StatusWaterPump, StatusWaterFlowSensor);
+
     //  if bad reading run fault display
     if (StatusWaterPump == ON && StatusWaterFlowSensor == OFF)
     {
@@ -2233,7 +2234,7 @@ void TestCLSensor()
   {
 
     OLED_Display.setTextSize(2);
-    OLED_Display.println("Mag CLOSD");
+    OLED_Display.println("Mag CLOSED");
 
     OLED_Display.setTextSize(1);
     OLED_Display.println("");
